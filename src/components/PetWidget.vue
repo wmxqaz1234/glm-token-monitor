@@ -117,8 +117,27 @@ async function refreshUsageData() {
   }
 }
 
+// 鼠标离开时收缩窗口
+async function onHoverLeave() {
+  // 清除防抖定时器
+  if (refreshDebounce.value) {
+    clearTimeout(refreshDebounce.value)
+    refreshDebounce.value = null
+  }
+
+  // 收缩窗口
+  await collapseWindow()
+}
+
 onMounted(async () => {
   await setupEventListener()
+
+  // 组件卸载时清理
+  return () => {
+    if (refreshDebounce.value) {
+      clearTimeout(refreshDebounce.value)
+    }
+  }
 })
 </script>
 
@@ -127,6 +146,7 @@ onMounted(async () => {
     data-tauri-drag-region
     @mousedown="startDrag"
     @mouseenter="onHoverRefresh"
+    @mouseleave="onHoverLeave"
   >
     <!-- 光晕层 -->
     <!-- <div class="glow-backdrop"></div> -->
