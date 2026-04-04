@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { useUsageState } from '../composables/useUsageState'
 import { useTauriEvents } from '../composables/useTauriEvents'
 
@@ -29,11 +30,13 @@ const isRefreshing = ref(false)
 const lastUpdateTime = ref<string>('')
 const fetchError = ref<string>('')
 
+// Event listener cleanup
+let cleanup: (() => void) | undefined
+
 // 手动刷新数据
 async function refreshUsageData() {
   try {
     isRefreshing.value = true
-    const { invoke } = await import('@tauri-apps/api/core')
     const data = await invoke<typeof usageData.value>('get_current_usage')
     usageData.value = data
     const now = new Date()
@@ -50,7 +53,6 @@ async function refreshUsageData() {
 // 关闭窗口
 async function closeWindow() {
   try {
-    const { invoke } = await import('@tauri-apps/api/core')
     await invoke('close_info_panel')
   } catch (err) {
     console.error('Close window failed:', err)
@@ -58,8 +60,12 @@ async function closeWindow() {
 }
 
 onMounted(async () => {
-  await setupEventListener()
+  cleanup = await setupEventListener()
   refreshUsageData()
+})
+
+onUnmounted(() => {
+  cleanup?.()
 })
 </script>
 
