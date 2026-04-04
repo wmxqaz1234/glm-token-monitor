@@ -36,6 +36,9 @@ onMounted(async () => {
   -webkit-app-region: drag;
   app-region: drag;
   background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .pet-container {
@@ -47,6 +50,9 @@ onMounted(async () => {
   justify-content: center;
   transition: background-color 0.4s ease;
   user-select: none;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .pet-face {
@@ -63,6 +69,7 @@ onMounted(async () => {
   background: white;
   border-radius: 50%;
   top: 8px;
+  border: none;
 }
 
 .eye.left { left: 6px; }
@@ -78,6 +85,12 @@ onMounted(async () => {
   border: 2px solid white;
   border-top: none;
   border-radius: 0 0 12px 12px;
+}
+
+/* 确保所有元素无边框 */
+* {
+  border: none !important;
+  outline: none !important;
 }
 
 /* State colors */

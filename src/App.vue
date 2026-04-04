@@ -27,5 +27,7 @@ const currentComponent = computed(() => {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  border: none !important;
+  outline: none !important;
 }
 </style>

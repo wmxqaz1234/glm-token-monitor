@@ -6,6 +6,8 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  border: none !important;
+  outline: none !important;
 }
 
 html, body {
@@ -13,6 +15,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: transparent !important;
+  border: none !important;
 }
 
 body {
@@ -26,10 +29,12 @@ body {
   width: 100%;
   height: 100%;
   background: transparent !important;
+  border: none !important;
 }
 
-/* 移除所有可能的背景 */
+/* 移除所有可能的背景和边框 */
 *::before,
 *::after {
   background: transparent !important;
+  border: none !important;
 }
