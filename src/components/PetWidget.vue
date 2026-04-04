@@ -89,6 +89,20 @@ async function expandWindow() {
   }
 }
 
+// 窗口收缩
+async function collapseWindow() {
+  try {
+    const { Window, LogicalSize } = await import('@tauri-apps/api/window')
+    const win = Window.getCurrent()
+    await win.setSize(new LogicalSize(WINDOW_SIZE_SMALL, WINDOW_SIZE_SMALL))
+    isExpanded.value = false
+  } catch (error) {
+    console.error('Failed to collapse window:', error)
+    // 强制重置状态
+    isExpanded.value = false
+  }
+}
+
 onMounted(async () => {
   await setupEventListener()
 })
