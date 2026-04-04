@@ -12,6 +12,7 @@ pub struct UsageData {
 
 impl UsageData {
     /// 计算使用百分比
+    #[allow(dead_code)]
     pub fn percent(&self) -> f64 {
         if self.total == 0 {
             return 0.0;

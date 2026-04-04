@@ -3,8 +3,7 @@
 mod events;
 mod polling;
 mod commands;
-
-use events::UsageData;
+mod tray;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,6 +13,12 @@ pub fn run() {
             commands::get_current_usage
         ])
         .setup(|app| {
+            // 创建系统托盘（macOS）
+            #[cfg(target_os = "macos")]
+            if let Err(e) = tray::create_system_tray(app) {
+                eprintln!("System tray error: {}", e);
+            }
+
             // 启动轮询服务
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {

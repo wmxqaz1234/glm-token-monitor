@@ -4,17 +4,31 @@ import type { UsageData } from './useUsageState'
 
 export function useTauriEvents() {
   const usageData: Ref<UsageData> = ref({ used: 0, total: 100 })
+  const lastError: Ref<string | null> = ref(null)
 
   // 监听 Rust 端推送的 usage-update 事件
   const setupEventListener = async () => {
-    const unlisten = await listen<UsageData>('usage-update', (event) => {
+    const unlistenUsage = await listen<UsageData>('usage-update', (event) => {
       usageData.value = event.payload
+      lastError.value = null // 清除错误状态
     })
-    return unlisten
+
+    // 监听错误事件
+    const unlistenError = await listen<string>('usage-error', (event) => {
+      lastError.value = event.payload
+      console.error('Usage error:', event.payload)
+    })
+
+    // 返回清理函数
+    return () => {
+      unlistenUsage()
+      unlistenError()
+    }
   }
 
   return {
     usageData,
+    lastError,
     setupEventListener
   }
 }

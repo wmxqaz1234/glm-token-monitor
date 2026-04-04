@@ -57,7 +57,9 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   transition: background-color 0.5s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1),
+              0 0 20px var(--glow-color, rgba(16, 185, 129, 0.3));
+  animation: glow-pulse 2s ease-in-out infinite;
 }
 
 .pet-face {
@@ -122,6 +124,19 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* State colors and glow effects */
+.state-fresh .pet-container { --glow-color: rgba(16, 185, 129, 0.4); }
+.state-flow .pet-container { --glow-color: rgba(59, 130, 246, 0.4); }
+.state-warning .pet-container { --glow-color: rgba(245, 158, 11, 0.4); }
+.state-panic .pet-container { --glow-color: rgba(249, 115, 22, 0.5); }
+.state-dead .pet-container { --glow-color: rgba(107, 114, 128, 0.2); }
+
+/* Glow pulse animation */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 20px var(--glow-color); }
+  50% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 30px var(--glow-color); }
 }
 
 /* State animations */

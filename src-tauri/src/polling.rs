@@ -30,6 +30,7 @@ pub async fn start_polling_loop(app: AppHandle) -> Result<(), Box<dyn std::error
             }
             Err(e) => {
                 eprintln!("Failed to fetch usage: {}", e);
+                let _ = app.emit("usage-error", format!("Usage fetch failed: {}", e));
             }
         }
     }
