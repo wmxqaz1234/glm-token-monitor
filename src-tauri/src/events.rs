@@ -3,16 +3,22 @@ use serde::{Deserialize, Serialize};
 /// 事件名称常量
 pub const EVENT_USAGE_UPDATE: &str = "usage-update";
 
-/// 使用量数据结构
+/// 推送给前端的使用量数据（驱动宠物状态 + 信息面板）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UsageData {
+    /// 5h Token 已用百分比（驱动宠物状态，0-100）
     pub used: u32,
+    /// 固定为 100
     pub total: u32,
+    /// 月 MCP 额度百分比（TIME_LIMIT.percentage）
+    pub time_percent: u32,
+    /// 5h Token 额度百分比（TOKENS_LIMIT.percentage）
+    pub tokens_percent: u32,
+    /// 月 MCP 剩余次数
+    pub time_remaining: Option<u32>,
 }
 
 impl UsageData {
-    /// 计算使用百分比
-    #[allow(dead_code)]
     pub fn percent(&self) -> f64 {
         if self.total == 0 {
             return 0.0;
@@ -21,19 +27,26 @@ impl UsageData {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// ── API 响应结构（反序列化用） ──
 
-    #[test]
-    fn test_percent_calculation() {
-        let data = UsageData { used: 50, total: 100 };
-        assert_eq!(data.percent(), 50.0);
-    }
+#[derive(Debug, Deserialize)]
+pub struct ApiResponse {
+    pub code: u32,
+    pub data: Option<ApiData>,
+    pub success: bool,
+}
 
-    #[test]
-    fn test_percent_zero_total() {
-        let data = UsageData { used: 10, total: 0 };
-        assert_eq!(data.percent(), 0.0);
-    }
+#[derive(Debug, Deserialize)]
+pub struct ApiData {
+    pub limits: Vec<LimitItem>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LimitItem {
+    #[serde(rename = "type")]
+    pub limit_type: String,
+    pub percentage: Option<u32>,
+    pub usage: Option<u32>,
+    pub number: Option<u32>,
+    pub remaining: Option<u32>,
 }

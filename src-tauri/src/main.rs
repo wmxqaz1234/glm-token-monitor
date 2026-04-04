@@ -18,8 +18,8 @@ pub fn run() {
             {
                 use tauri::Manager;
                 if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.set_ignore_cursor_events(true);
                     let _ = window.set_decorations(false);
+                    // 不要使用 set_ignore_cursor_events，它会阻止鼠标事件
                 }
             }
 

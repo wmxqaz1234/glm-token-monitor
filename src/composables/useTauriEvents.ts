@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event'
 import type { UsageData } from './useUsageState'
 
 export function useTauriEvents() {
-  const usageData: Ref<UsageData> = ref({ used: 0, total: 100 })
+  const usageData: Ref<UsageData> = ref({ used: 0, total: 100, time_percent: 0, tokens_percent: 0 })
   const lastError: Ref<string | null> = ref(null)
 
   // 监听 Rust 端推送的 usage-update 事件

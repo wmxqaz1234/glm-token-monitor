@@ -28,20 +28,16 @@ body {
   background: transparent !important;
 }
 
-/* 确保拖动区域工作 */
-[data-tauri-drag-region],
-[app-region="drag"] {
-  -webkit-app-region: drag !important;
-  app-region: drag !important;
+/* 手动拖动实现 - 不使用 CSS app-region */
+
+/* 确保所有可拖动元素的光标 */
+.pet-container,
+.pet-container:hover {
+  cursor: grab !important;
 }
 
-/* 确保拖动区域的光标样式 */
-[data-tauri-drag-region] {
-  cursor: grab;
-}
-
-[data-tauri-drag-region]:active {
-  cursor: grabbing;
+.pet-container:active {
+  cursor: grabbing !important;
 }
 
 /* 移除所有可能的背景 */

@@ -5,6 +5,9 @@ export type PetState = 'Fresh' | 'Flow' | 'Warning' | 'Panic' | 'Dead'
 export interface UsageData {
   used: number
   total: number
+  time_percent: number       // 月MCP额度 %
+  tokens_percent: number     // 5h Token额度 %
+  time_remaining?: number    // 月MCP剩余次数（可能为null）
 }
 
 export const COLORS: Record<PetState, string> = {
