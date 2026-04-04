@@ -40,23 +40,22 @@ const isExpanded = ref(false)
 const refreshDebounce = ref<number | null>(null)
 const isTransitioning = ref(false)
 
-// 鼠标悬停时按需新刷接口
+// 鼠标悬停时扩展窗口并刷新接口
 async function onHoverRefresh() {
-  if (isRefreshing.value) return
-  isRefreshing.value = true
-  fetchError.value = ''
-  try {
-    const { invoke } = await import('@tauri-apps/api/core')
-    const data = await invoke<typeof usageData.value>('get_current_usage')
-    usageData.value = data
-    const now = new Date()
-    lastUpdateTime.value = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`
-  } catch (err) {
-    fetchError.value = String(err)
-    console.error('refresh failed:', err)
-  } finally {
-    isRefreshing.value = false
+  // 防抖检查
+  if (refreshDebounce.value) return
+
+  refreshDebounce.value = window.setTimeout(() => {
+    refreshDebounce.value = null
+  }, REFRESH_DEBOUNCE_MS)
+
+  // 扩展窗口
+  if (!isExpanded.value) {
+    await expandWindow()
   }
+
+  // 静默刷新接口
+  await refreshUsageData()
 }
 
 const startDrag = async (event: MouseEvent) => {
