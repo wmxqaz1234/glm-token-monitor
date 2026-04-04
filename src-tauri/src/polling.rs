@@ -4,7 +4,7 @@ use tauri::{AppHandle, Emitter};
 use tokio::time::interval;
 
 /// Mock 数据 - 返回固定的使用量数据
-async fn fetch_usage() -> Result<UsageData, String> {
+pub async fn fetch_usage() -> Result<UsageData, String> {
     // 模拟 API 请求延迟
     tokio::time::sleep(Duration::from_millis(100)).await;
 
