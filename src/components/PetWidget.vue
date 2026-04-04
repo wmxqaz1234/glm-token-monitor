@@ -437,6 +437,7 @@ onMounted(async () => {
   pointer-events: auto;
   -webkit-app-region: drag;
   app-region: drag;
+  transition: width 350ms ease-out, height 350ms ease-out;
 }
 .pet-widget:active { cursor: pointer; }
 
@@ -673,14 +674,22 @@ onMounted(async () => {
   color: #E2E8F0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.22s ease;
+  transition: all 350ms ease-out;
   z-index: 10;
   font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   border: 1px solid rgba(255,255,255,0.1);
   overflow: hidden;
   padding: 6px 9px;
 }
-.pet-widget:hover .heart-msg { opacity: 1; }
+.pet-widget:hover .heart-msg,
+.pet-widget.expanded .heart-msg {
+  opacity: 1;
+}
+
+/* 扩展状态下的内容放大样式 */
+.pet-widget.expanded .heart-msg {
+  transform: scale(1.5);
+}
 
 /* 情感心语文字 */
 .hm-quote {
