@@ -17,42 +17,52 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div
-    class="pet-widget"
-    data-tauri-drag-region
-    @mouseenter="isHovered = true"
-    @mouseleave="isHovered = false"
-  >
-    <div class="pet-container" :style="{ backgroundColor: stateColor }">
-      <div class="pet-face" :class="`state-${petState.toLowerCase()}`">
-        <div class="eye left"></div>
-        <div class="eye right"></div>
-        <div class="mouth"></div>
+  <div class="pet-widget" data-tauri-drag-region>
+    <div
+      class="pet-content"
+      @mouseenter="isHovered = true"
+      @mouseleave="isHovered = false"
+    >
+      <div class="pet-container" :style="{ backgroundColor: stateColor }">
+        <div class="pet-face" :class="`state-${petState.toLowerCase()}`">
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="mouth"></div>
+        </div>
       </div>
-    </div>
 
-    <div class="status-bar" :class="{ expanded: isHovered }">
-      <div class="progress-track">
-        <div class="progress-fill" :style="{ width: `${usagePercent}%`, backgroundColor: stateColor }"></div>
+      <div class="status-bar" :class="{ expanded: isHovered }">
+        <div class="progress-track">
+          <div class="progress-fill" :style="{ width: `${usagePercent}%`, backgroundColor: stateColor }"></div>
+        </div>
+        <div class="percent-text">{{ Math.round(usagePercent) }}%</div>
       </div>
-      <div class="percent-text">{{ Math.round(usagePercent) }}%</div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .pet-widget {
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pet-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 8px;
+  padding: 12px;
 }
 
 .pet-container {
-  width: 80px;
-  height: 80px;
-  border-radius: 16px;
+  width: 70px;
+  height: 70px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,70 +70,81 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1),
               0 0 20px var(--glow-color, rgba(16, 185, 129, 0.3));
   animation: glow-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+  user-select: none;
 }
 
 .pet-face {
   position: relative;
-  width: 50px;
-  height: 40px;
+  width: 44px;
+  height: 36px;
+  pointer-events: none;
+  user-select: none;
 }
 
 .eye {
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   background: white;
   border-radius: 50%;
-  top: 10px;
+  top: 9px;
+  pointer-events: none;
 }
 
-.eye.left { left: 8px; }
-.eye.right { right: 8px; }
+.eye.left { left: 7px; }
+.eye.right { right: 7px; }
 
 .mouth {
   position: absolute;
-  bottom: 8px;
+  bottom: 7px;
   left: 50%;
   transform: translateX(-50%);
-  width: 16px;
-  height: 8px;
+  width: 14px;
+  height: 7px;
   border: 2px solid white;
   border-top: none;
-  border-radius: 0 0 16px 16px;
+  border-radius: 0 0 14px 14px;
+  pointer-events: none;
 }
 
 .status-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 0;
+  max-width: 110px;
   opacity: 0;
   overflow: hidden;
   transition: all 0.3s ease;
+  pointer-events: none;
 }
 
 .status-bar.expanded {
-  width: 120px;
+  width: 110px;
   opacity: 1;
 }
 
 .progress-track {
   flex: 1;
-  height: 6px;
+  height: 5px;
   background: rgba(0, 0, 0, 0.1);
   border-radius: 3px;
   overflow: hidden;
+  min-width: 0;
 }
 
 .progress-fill {
   height: 100%;
   transition: width 0.5s ease, background-color 0.5s ease;
+  pointer-events: none;
 }
 
 .percent-text {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 /* State colors and glow effects */
