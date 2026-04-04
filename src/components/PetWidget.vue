@@ -103,6 +103,21 @@ async function collapseWindow() {
   }
 }
 
+// 静默刷新数据（不显示加载提示）
+async function refreshUsageData() {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    const data = await invoke<typeof usageData.value>('get_current_usage')
+    usageData.value = data
+    const now = new Date()
+    lastUpdateTime.value = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`
+    fetchError.value = ''
+  } catch (err) {
+    fetchError.value = String(err)
+    console.error('Silent refresh failed:', err)
+  }
+}
+
 onMounted(async () => {
   await setupEventListener()
 })
