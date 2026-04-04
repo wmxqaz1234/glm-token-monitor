@@ -1,4 +1,4 @@
-use tauri::{WebviewWindow, Manager, Result};
+use tauri::{WebviewWindow, Manager};
 
 /// 打开信息面板窗口
 #[tauri::command]
@@ -14,21 +14,26 @@ pub async fn open_info_panel(
 
     // 获取主窗口位置（使用逻辑坐标）
     let main_pos = main_window
-        .current_position()
+        .outer_position()
         .map_err(|e| format!("Failed to get main window position: {}", e))?;
-    let main_pos_logical = main_pos.to_logical(main_window.current_monitor().ok_or("Failed to get monitor")?.scale_factor());
+    let scale_factor = main_window
+        .current_monitor()
+        .map_err(|e| format!("Failed to get monitor: {}", e))?
+        .ok_or("Failed to get monitor")?
+        .scale_factor();
+    let main_pos_logical: tauri::LogicalPosition<f64> = main_pos.to_logical(scale_factor);
 
     // 获取主窗口实际大小（使用逻辑坐标）
     let main_size = main_window
         .inner_size()
         .map_err(|e| format!("Failed to get main window size: {}", e))?;
-    let main_size_logical = main_size.to_logical(main_window.current_monitor().ok_or("Failed to get monitor")?.scale_factor());
+    let main_size_logical: tauri::LogicalSize<f64> = main_size.to_logical(scale_factor);
 
     // 计算副窗口位置（主窗口右侧，间隔 8px）
     let panel_width = 280.0;
     let gap = 8.0;
-    let mut info_x = main_pos_logical.x + main_size_logical.width + gap;
-    let info_y = main_pos_logical.y;
+    let mut info_x: f64 = main_pos_logical.x + main_size_logical.width + gap;
+    let info_y: f64 = main_pos_logical.y;
 
     // 获取主显示器信息
     if let Some(monitor) = main_window.current_monitor().map_err(|e| format!("Failed to get monitor: {}", e))? {

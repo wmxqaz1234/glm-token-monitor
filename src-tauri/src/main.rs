@@ -4,13 +4,16 @@ mod events;
 mod polling;
 mod commands;
 mod tray;
+mod windows;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            commands::get_current_usage
+            commands::get_current_usage,
+            windows::open_info_panel,
+            windows::close_info_panel
         ])
         .setup(|app| {
             // Windows 平台：设置完全透明无边框窗口
