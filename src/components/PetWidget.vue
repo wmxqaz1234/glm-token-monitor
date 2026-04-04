@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useUsageState } from '../composables/useUsageState'
 import { useTauriEvents } from '../composables/useTauriEvents'
 
 const { usageData, setupEventListener } = useTauriEvents()
-const { usagePercent, petState, stateColor } = useUsageState(
+const { petState, stateColor } = useUsageState(
   computed(() => usageData.value.used),
   computed(() => usageData.value.total)
 )
-
-const isHovered = ref(false)
 
 onMounted(async () => {
   await setupEventListener()
@@ -18,24 +16,11 @@ onMounted(async () => {
 
 <template>
   <div class="pet-widget">
-    <div
-      class="pet-content"
-      @mouseenter="isHovered = true"
-      @mouseleave="isHovered = false"
-    >
-      <div class="pet-container" :style="{ backgroundColor: stateColor }">
-        <div class="pet-face" :class="`state-${petState.toLowerCase()}`">
-          <div class="eye left"></div>
-          <div class="eye right"></div>
-          <div class="mouth"></div>
-        </div>
-      </div>
-
-      <div class="status-bar" :class="{ expanded: isHovered }">
-        <div class="progress-track">
-          <div class="progress-fill" :style="{ width: `${usagePercent}%`, backgroundColor: stateColor }"></div>
-        </div>
-        <div class="percent-text">{{ Math.round(usagePercent) }}%</div>
+    <div class="pet-container" :style="{ backgroundColor: stateColor }">
+      <div class="pet-face" :class="`state-${petState.toLowerCase()}`">
+        <div class="eye left"></div>
+        <div class="eye right"></div>
+        <div class="mouth"></div>
       </div>
     </div>
   </div>
@@ -43,171 +28,140 @@ onMounted(async () => {
 
 <style scoped>
 .pet-widget {
-  width: 150px;
-  height: 150px;
+  width: 96px;
+  height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   -webkit-app-region: drag;
   app-region: drag;
 }
 
-.pet-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
-}
-
 .pet-container {
-  width: 70px;
-  height: 70px;
-  border-radius: 14px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.5s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1),
-              0 0 20px var(--glow-color, rgba(16, 185, 129, 0.3));
-  animation: glow-pulse 2s ease-in-out infinite;
+  transition: background-color 0.4s ease, box-shadow 0.4s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08),
+              0 0 0 1px rgba(255, 255, 255, 0.1);
   user-select: none;
 }
 
 .pet-face {
   position: relative;
-  width: 44px;
-  height: 36px;
+  width: 40px;
+  height: 32px;
   user-select: none;
 }
 
 .eye {
   position: absolute;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   background: white;
   border-radius: 50%;
-  top: 9px;
+  top: 8px;
 }
 
-.eye.left { left: 7px; }
-.eye.right { right: 7px; }
+.eye.left { left: 6px; }
+.eye.right { right: 6px; }
 
 .mouth {
   position: absolute;
-  bottom: 7px;
+  bottom: 6px;
   left: 50%;
   transform: translateX(-50%);
-  width: 14px;
-  height: 7px;
+  width: 12px;
+  height: 6px;
   border: 2px solid white;
   border-top: none;
-  border-radius: 0 0 14px 14px;
-}
-
-.status-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 0;
-  max-width: 110px;
-  opacity: 0;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.status-bar.expanded {
-  width: 110px;
-  opacity: 1;
-}
-
-.progress-track {
-  flex: 1;
-  height: 5px;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
-  min-width: 0;
-}
-
-.progress-fill {
-  height: 100%;
-  transition: width 0.5s ease, background-color 0.5s ease;
-}
-
-.percent-text {
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
+  border-radius: 0 0 12px 12px;
 }
 
 /* State colors and glow effects */
-.state-fresh .pet-container { --glow-color: rgba(16, 185, 129, 0.4); }
-.state-flow .pet-container { --glow-color: rgba(59, 130, 246, 0.4); }
-.state-warning .pet-container { --glow-color: rgba(245, 158, 11, 0.4); }
-.state-panic .pet-container { --glow-color: rgba(249, 115, 22, 0.5); }
-.state-dead .pet-container { --glow-color: rgba(107, 114, 128, 0.2); }
+.state-fresh .pet-container {
+  --glow-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15),
+              0 0 16px rgba(16, 185, 129, 0.2),
+              0 0 0 1px rgba(255, 255, 255, 0.1);
+}
 
-/* Glow pulse animation */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 20px var(--glow-color); }
-  50% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 30px var(--glow-color); }
+.state-flow .pet-container {
+  --glow-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15),
+              0 0 16px rgba(59, 130, 246, 0.2),
+              0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.state-warning .pet-container {
+  --glow-color: rgba(245, 158, 11, 0.3);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15),
+              0 0 16px rgba(245, 158, 11, 0.2),
+              0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.state-panic .pet-container {
+  --glow-color: rgba(249, 115, 22, 0.35);
+  box-shadow: 0 2px 12px rgba(249, 115, 22, 0.25),
+              0 0 20px rgba(249, 115, 22, 0.3),
+              0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.state-dead .pet-container {
+  --glow-color: rgba(107, 114, 128, 0.15);
+  box-shadow: 0 2px 6px rgba(107, 114, 128, 0.1),
+              0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 /* State animations */
-/* Fresh 呼吸动画 */
 .state-fresh {
-  animation: breathe 2s ease-in-out infinite;
+  animation: breathe 2.5s ease-in-out infinite;
 }
 
 @keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.05); opacity: 1; }
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.06); opacity: 1; }
 }
 
-/* Flow 敲打动画 */
 .state-flow {
-  animation: type 0.8s ease-in-out infinite;
+  animation: type 1s ease-in-out infinite;
 }
 
 @keyframes type {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
+  50% { transform: translateY(-1.5px); }
 }
 
-/* Warning 抖动动画 */
 .state-warning {
-  animation: shake 0.5s ease-in-out infinite;
+  animation: shake 0.6s ease-in-out infinite;
 }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-2px); }
-  75% { transform: translateX(2px); }
+  25% { transform: translateX(-1.5px); }
+  75% { transform: translateX(1.5px); }
 }
 
-/* Panic 冒汗动画 */
 .state-panic {
-  animation: sweat 0.3s ease-in-out infinite;
+  animation: sweat 0.25s ease-in-out infinite;
 }
 
 @keyframes sweat {
   0%, 100% { transform: scale(1) rotate(0deg); }
-  25% { transform: scale(1.02) rotate(-1deg); }
-  75% { transform: scale(0.98) rotate(1deg); }
+  25% { transform: scale(1.03) rotate(-0.5deg); }
+  75% { transform: scale(0.97) rotate(0.5deg); }
 }
 
-/* Dead 灵魂出窍动画 */
 .state-dead {
-  animation: ghost 2s ease-in-out infinite;
+  animation: ghost 2.5s ease-in-out infinite;
 }
 
 @keyframes ghost {
   0% { transform: translateY(0); opacity: 1; }
-  50% { transform: translateY(-10px); opacity: 0.5; }
+  50% { transform: translateY(-8px); opacity: 0.4; }
   100% { transform: translateY(0); opacity: 1; }
 }
 </style>
