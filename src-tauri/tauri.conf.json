@@ -13,6 +13,7 @@
     "windows": [
       {
         "title": "",
+        "label": "main",
         "width": 96,
         "height": 96,
         "decorations": false,
@@ -21,7 +22,8 @@
         "resizable": false,
         "skipTaskbar": false,
         "center": true,
-        "visible": true
+        "visible": true,
+        "backgroundColor": "#00000000"
       }
     ],
     "withGlobalTauri": true,

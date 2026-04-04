@@ -35,6 +35,7 @@ onMounted(async () => {
   justify-content: center;
   -webkit-app-region: drag;
   app-region: drag;
+  background: transparent !important;
 }
 
 .pet-container {
@@ -44,9 +45,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.4s ease, box-shadow 0.4s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08),
-              0 0 0 1px rgba(255, 255, 255, 0.1);
+  transition: background-color 0.4s ease;
   user-select: none;
 }
 
@@ -81,39 +80,25 @@ onMounted(async () => {
   border-radius: 0 0 12px 12px;
 }
 
-/* State colors and glow effects */
+/* State colors */
 .state-fresh .pet-container {
-  --glow-color: rgba(16, 185, 129, 0.3);
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15),
-              0 0 16px rgba(16, 185, 129, 0.2),
-              0 0 0 1px rgba(255, 255, 255, 0.1);
+  background-color: #10B981;
 }
 
 .state-flow .pet-container {
-  --glow-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15),
-              0 0 16px rgba(59, 130, 246, 0.2),
-              0 0 0 1px rgba(255, 255, 255, 0.1);
+  background-color: #3B82F6;
 }
 
 .state-warning .pet-container {
-  --glow-color: rgba(245, 158, 11, 0.3);
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15),
-              0 0 16px rgba(245, 158, 11, 0.2),
-              0 0 0 1px rgba(255, 255, 255, 0.1);
+  background-color: #F59E0B;
 }
 
 .state-panic .pet-container {
-  --glow-color: rgba(249, 115, 22, 0.35);
-  box-shadow: 0 2px 12px rgba(249, 115, 22, 0.25),
-              0 0 20px rgba(249, 115, 22, 0.3),
-              0 0 0 1px rgba(255, 255, 255, 0.1);
+  background-color: #F97316;
 }
 
 .state-dead .pet-container {
-  --glow-color: rgba(107, 114, 128, 0.15);
-  box-shadow: 0 2px 6px rgba(107, 114, 128, 0.1),
-              0 0 0 1px rgba(255, 255, 255, 0.05);
+  background-color: #6B7280;
 }
 
 /* State animations */

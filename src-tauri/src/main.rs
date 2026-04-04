@@ -13,6 +13,15 @@ pub fn run() {
             commands::get_current_usage
         ])
         .setup(|app| {
+            // Windows 平台：设置完全透明窗口
+            #[cfg(target_os = "windows")]
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_ignore_cursor_events(true);
+                }
+            }
+
             // 创建系统托盘（macOS）
             #[cfg(target_os = "macos")]
             if let Err(e) = tray::create_system_tray(app) {
