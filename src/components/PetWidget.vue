@@ -681,7 +681,6 @@ onMounted(async () => {
   overflow: hidden;
   padding: 6px 9px;
 }
-.pet-widget:hover .heart-msg,
 .pet-widget.expanded .heart-msg {
   opacity: 1;
 }
