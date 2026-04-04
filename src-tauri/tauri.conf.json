@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "PlanGuard",
+        "title": "",
         "width": 150,
         "height": 150,
         "decorations": false,
@@ -20,7 +20,8 @@
         "alwaysOnTop": true,
         "resizable": false,
         "skipTaskbar": false,
-        "center": true
+        "center": true,
+        "visible": true
       }
     ],
     "withGlobalTauri": true,

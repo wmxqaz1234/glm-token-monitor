@@ -17,7 +17,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="pet-widget" data-tauri-drag-region>
+  <div class="pet-widget">
     <div
       class="pet-content"
       @mouseenter="isHovered = true"
@@ -49,6 +49,8 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  -webkit-app-region: drag;
+  app-region: drag;
 }
 
 .pet-content {
@@ -57,6 +59,8 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 12px;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
 .pet-container {
@@ -70,7 +74,6 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1),
               0 0 20px var(--glow-color, rgba(16, 185, 129, 0.3));
   animation: glow-pulse 2s ease-in-out infinite;
-  pointer-events: none;
   user-select: none;
 }
 
@@ -78,7 +81,6 @@ onMounted(async () => {
   position: relative;
   width: 44px;
   height: 36px;
-  pointer-events: none;
   user-select: none;
 }
 
@@ -89,7 +91,6 @@ onMounted(async () => {
   background: white;
   border-radius: 50%;
   top: 9px;
-  pointer-events: none;
 }
 
 .eye.left { left: 7px; }
@@ -105,7 +106,6 @@ onMounted(async () => {
   border: 2px solid white;
   border-top: none;
   border-radius: 0 0 14px 14px;
-  pointer-events: none;
 }
 
 .status-bar {
@@ -117,7 +117,6 @@ onMounted(async () => {
   opacity: 0;
   overflow: hidden;
   transition: all 0.3s ease;
-  pointer-events: none;
 }
 
 .status-bar.expanded {
@@ -137,14 +136,12 @@ onMounted(async () => {
 .progress-fill {
   height: 100%;
   transition: width 0.5s ease, background-color 0.5s ease;
-  pointer-events: none;
 }
 
 .percent-text {
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
-  pointer-events: none;
 }
 
 /* State colors and glow effects */
