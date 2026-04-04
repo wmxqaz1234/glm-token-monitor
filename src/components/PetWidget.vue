@@ -70,6 +70,25 @@ const startDrag = async (event: MouseEvent) => {
   }
 }
 
+// 窗口扩展
+async function expandWindow() {
+  if (isTransitioning.value) return
+  isTransitioning.value = true
+
+  try {
+    const { Window, LogicalSize } = await import('@tauri-apps/api/window')
+    const win = Window.getCurrent()
+    await win.setSize(new LogicalSize(WINDOW_SIZE_LARGE, WINDOW_SIZE_LARGE))
+    isExpanded.value = true
+  } catch (error) {
+    console.error('Failed to expand window:', error)
+  } finally {
+    setTimeout(() => {
+      isTransitioning.value = false
+    }, TRANSITION_DURATION_MS)
+  }
+}
+
 onMounted(async () => {
   await setupEventListener()
 })
