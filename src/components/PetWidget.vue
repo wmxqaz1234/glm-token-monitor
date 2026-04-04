@@ -2,12 +2,20 @@
 import { computed, onMounted } from 'vue'
 import { useUsageState } from '../composables/useUsageState'
 import { useTauriEvents } from '../composables/useTauriEvents'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 const { usageData, setupEventListener } = useTauriEvents()
 const { petState, stateColor } = useUsageState(
   computed(() => usageData.value.used),
   computed(() => usageData.value.total)
 )
+
+// 开始拖动窗口
+const startDrag = () => {
+  getCurrentWindow().then((window) => {
+    window.startDragging()
+  })
+}
 
 onMounted(async () => {
   await setupEventListener()
@@ -19,7 +27,7 @@ onMounted(async () => {
     <div
       class="pet-container"
       :style="{ backgroundColor: stateColor }"
-      data-tauri-drag-region
+      @mousedown="startDrag"
     >
       <div class="pet-face" :class="`state-${petState.toLowerCase()}`">
         <div class="eye left"></div>
@@ -38,6 +46,8 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   background: transparent !important;
+  position: relative;
+  z-index: 1;
 }
 
 .pet-container {
@@ -48,10 +58,12 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   transition: background-color 0.4s ease;
-  user-select: none;
+  position: relative;
+  z-index: 2;
   -webkit-app-region: drag;
   app-region: drag;
   cursor: grab;
+  pointer-events: auto;
 }
 
 .pet-container:active {
@@ -62,7 +74,8 @@ onMounted(async () => {
   position: relative;
   width: 40px;
   height: 32px;
-  user-select: none;
+  pointer-events: none;
+  z-index: 3;
 }
 
 .eye {
@@ -72,6 +85,7 @@ onMounted(async () => {
   background: white;
   border-radius: 50%;
   top: 8px;
+  pointer-events: none;
   border: none;
 }
 
@@ -88,12 +102,7 @@ onMounted(async () => {
   border: 2px solid white;
   border-top: none;
   border-radius: 0 0 12px 12px;
-}
-
-/* 确保所有元素无边框 */
-* {
-  border: none !important;
-  outline: none !important;
+  pointer-events: none;
 }
 
 /* State colors */
