@@ -31,7 +31,6 @@ const fetchError = ref<string>('')
 // 悬浮与拖拽相关状态
 const isExpanded = ref(false)
 const isDragging = ref(false)
-const showSidePanel = ref(false)
 
 // 拖动和点击处理
 let dragStartTime = 0
@@ -73,27 +72,12 @@ const handleClick = async (event: MouseEvent) => {
 
   // 如果移动距离小于5px且持续时间小于300ms，认为是点击而非拖动
   if (dragDistance < 5 && dragDuration < 300) {
-    toggleSidePanel()
-  }
-}
-
-// 切换右侧面板显示
-async function toggleSidePanel() {
-  showSidePanel.value = !showSidePanel.value
-
-  try {
-    const { Window, LogicalSize } = await import('@tauri-apps/api/window')
-    const win = Window.getCurrent()
-
-    if (showSidePanel.value) {
-      // 展开面板：调整窗口大小为 96 + 240 = 336px 宽
-      await win.setSize(new LogicalSize(336, 96))
-    } else {
-      // 收起面板：恢复窗口大小为 96px
-      await win.setSize(new LogicalSize(96, 96))
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('open_info_panel')
+    } catch (err) {
+      console.error('Open info panel failed:', err)
     }
-  } catch (error) {
-    console.error('Toggle side panel failed:', error)
   }
 }
 
@@ -173,10 +157,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="pet-widget" :class="[`pet-${petState.toLowerCase()}`, { expanded: isExpanded, 'side-panel-open': showSidePanel }]"
+  <div class="pet-widget" :class="[`pet-${petState.toLowerCase()}`, { expanded: isExpanded }]"
     data-tauri-drag-region
     @mousedown="startDrag"
     @click="handleClick"
+    @dblclick.prevent
   >
     <!-- 光晕层 -->
     <!-- <div class="glow-backdrop"></div> -->
@@ -452,7 +437,10 @@ onUnmounted(() => {
 
     <!-- 独立的定时心语对话框（置于底部并指向上方） -->
     <transition name="bubble-fade">
-      <div v-if="showQuoteBubble && !isExpanded" class="pixel-bubble quote-bubble" :class="`bubble-${petState.toLowerCase()}`">
+      <div v-if="showQuoteBubble && !isExpanded" class="pixel-bubble quote-bubble" :class="`bubble-${petState.toLowerCase()}`"
+        @mousedown.stop
+        @click.stop
+        @dblclick.stop>
         <span class="bubble-val quote-text">{{ heartMsg }}</span>
       </div>
     </transition>
@@ -461,62 +449,6 @@ onUnmounted(() => {
     <div class="pixel-bubble token-mode" :class="`bubble-${petState.toLowerCase()}`">
       5h: <span class="bubble-val">{{ 100 - tokensPercent }}%</span>
     </div>
-
-    <!-- 右侧信息面板 -->
-    <transition name="side-panel-slide">
-      <div v-if="showSidePanel" class="side-info-panel">
-        <div class="panel-header">
-          <span class="panel-title">📊 用量详情</span>
-          <button class="panel-close" @click.stop="toggleSidePanel">×</button>
-        </div>
-        <div class="panel-content">
-          <!-- 状态心语 -->
-          <div class="panel-section">
-            <div class="section-label">💭 状态</div>
-            <div class="heart-text-large">{{ heartMsg }}</div>
-          </div>
-
-          <!-- 月度额度 -->
-          <div class="panel-section">
-            <div class="section-label">🗓️ 月度额度</div>
-            <div class="metric-row">
-              <div class="metric-info">
-                <span class="metric-percent">{{ timePercent }}%</span>
-                <span class="metric-remaining">剩余 {{ timeRemaining }} 次</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill" :class="`progress-${petState.toLowerCase()}`" :style="{ width: timePercent + '%' }"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 5小时额度 -->
-          <div class="panel-section">
-            <div class="section-label">⏱️ 5小时额度</div>
-            <div class="metric-row">
-              <div class="metric-info">
-                <span class="metric-percent">{{ tokensPercent }}%</span>
-                <span class="metric-remaining">剩余 {{ 100 - tokensPercent }}%</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill progress-tokens" :style="{ width: tokensPercent + '%' }"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 最后更新时间 -->
-          <div class="panel-section">
-            <div class="section-label">🔄 最后更新</div>
-            <div class="update-time">{{ lastUpdateTime || '加载中...' }}</div>
-          </div>
-
-          <!-- 错误提示 -->
-          <div v-if="fetchError" class="panel-section">
-            <div class="error-message">⚠ {{ fetchError }}</div>
-          </div>
-        </div>
-      </div>
-    </transition>
   </div>
 </template>
 
@@ -534,7 +466,6 @@ onUnmounted(() => {
   user-select: none;
   pointer-events: auto;
   border-radius: 50%;
-  transition: width 350ms ease-out, height 350ms ease-out;
   -webkit-app-region: drag;
 }
 .pet-widget:active { cursor: pointer; }
@@ -941,40 +872,43 @@ onUnmounted(() => {
   transform: translateY(-8px) scale(0.8);
 }
 
-/* 长文本的心语模式特定样式扩展（置于极左上角，彻底脱离猫咪身体） */
+/* 长文本的心语模式特定样式扩展（置于底部中央，避免遮挡宠物和token） */
 .quote-bubble {
-  left: 2px; 
+  left: 50%;
   right: auto;
-  top: 2px;
-  bottom: auto; 
-  max-width: 58px; /* 留出右上角的 Token 空间 */
+  top: auto;
+  bottom: -4px;
+  transform: translateX(-50%);
+  max-width: 160px; /* 两倍宽度，更好展示心语内容 */
   white-space: normal;
-  text-align: left; /* 多行长文本左对齐优先 */
-  line-height: 1.25; /* 缩小行高压缩排版 */
-  padding: 3px 5px; /* 压缩内间距释放内部空间 */
+  text-align: center; /* 居中对齐 */
+  line-height: 1.25;
+  padding: 3px 5px;
   border-radius: 4px;
-  justify-content: flex-start;
+  justify-content: center;
   overflow-wrap: break-word;
-  z-index: 50; /* 提供极高层级覆盖率，避免被任何图形截掉 */
+  z-index: 50;
 }
-/* 将尾巴向右平挪，依旧指向下方偏中间的核心动物身段 */
-.quote-bubble::after { 
-  top: auto; 
-  bottom: -6px; 
-  left: 25px; 
-  border-bottom: 6px solid transparent; 
-  border-left: 6px solid #334155; 
-  border-right: none; 
-  border-top: none;
+/* 尾巴指向下方（朝向宠物） */
+.quote-bubble::after {
+  top: auto;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top: 6px solid #334155;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: none;
 }
-.quote-bubble::before { 
-  top: auto; 
-  bottom: -2.5px; 
-  left: 27.5px; 
-  border-bottom: 3.5px solid transparent; 
-  border-left: 3.5px solid #0F172A; 
-  border-right: none; 
-  border-top: none;
+.quote-bubble::before {
+  top: auto;
+  bottom: -2.5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top: 3.5px solid #0F172A;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-bottom: none;
 }
 
 .quote-text {
@@ -1012,180 +946,5 @@ onUnmounted(() => {
   25% { transform: translateX(1px); }
   75% { transform: translateX(-1px); }
   100% { transform: translateX(0); }
-}
-
-/* ── 右侧信息面板 ── */
-.pet-widget.side-panel-open {
-  width: 336px;
-  border-radius: 12px;
-}
-
-.side-info-panel {
-  position: absolute;
-  left: 96px;
-  top: 0;
-  width: 240px;
-  height: 96px;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 0 12px 12px 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-left: none;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 20;
-  pointer-events: auto;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  background: rgba(30, 41, 59, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.panel-title {
-  font-size: 10px;
-  font-weight: 600;
-  color: #E2E8F0;
-  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-}
-
-.panel-close {
-  width: 18px;
-  height: 18px;
-  border: none;
-  background: rgba(239, 68, 68, 0.2);
-  color: #F87171;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.panel-close:hover {
-  background: rgba(239, 68, 68, 0.4);
-  transform: scale(1.1);
-}
-
-.panel-content {
-  flex: 1;
-  padding: 8px 10px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.panel-section {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.section-label {
-  font-size: 8px;
-  color: #94A3B8;
-  font-weight: 500;
-  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-}
-
-.heart-text-large {
-  font-size: 9px;
-  color: #CBD5E1;
-  line-height: 1.4;
-  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-}
-
-.metric-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.metric-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.metric-percent {
-  font-size: 12px;
-  font-weight: 700;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.metric-remaining {
-  font-size: 8px;
-  color: #94A3B8;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-.progress-fresh { background: linear-gradient(90deg, #10B981, #34D399); }
-.progress-flow { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
-.progress-warning { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
-.progress-panic { background: linear-gradient(90deg, #EF4444, #F87171); }
-.progress-dead { background: linear-gradient(90deg, #6B7280, #9CA3AF); }
-.progress-tokens { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
-
-.update-time {
-  font-size: 8px;
-  color: #64748B;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.error-message {
-  font-size: 8px;
-  color: #F87171;
-  background: rgba(239, 68, 68, 0.1);
-  padding: 4px 6px;
-  border-radius: 4px;
-  line-height: 1.3;
-}
-
-/* 侧边面板滑入动画 */
-.side-panel-slide-enter-from {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-
-.side-panel-slide-enter-to {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.side-panel-slide-leave-from {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.side-panel-slide-leave-to {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-
-.side-panel-slide-enter-active,
-.side-panel-slide-leave-active {
-  transition: all 0.3s ease-out;
 }
 </style>
