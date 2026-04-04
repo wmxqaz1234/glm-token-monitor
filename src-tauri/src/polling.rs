@@ -1,11 +1,20 @@
 use crate::events::{ApiResponse, UsageData, EVENT_USAGE_UPDATE};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter};
 use tokio::time::interval;
 
-const API_URL: &str = "https://www.bigmodel.cn/api/monitor/usage/quota/limit";
+const API_BASE: &str = "https://open.bigmodel.cn/api/monitor/usage/quota/limit";
 // TODO: 生产环境应从配置文件或环境变量读取
-const AUTH_TOKEN: &str = "eyJhbGciOiJIUzUxMiJ9.eyJ1c2VyX3R5cGUiOiJQRVJTT05BTCIsInVzZXJfY2hhbm5lbCI6IldFQiIsInVzZXJfaWQiOjE5Nzk5NTksInVzZXJfa2V5IjoiZjhiNjg2ZjUtNGQ0MS00ZjYxLTk0ODAtYjQzYTg4NzRjZmQ3IiwiY3VzdG9tZXJfaWQiOiIzNTg3MTc0ODkwNTE3NzAxOSIsInVzZXJuYW1lIjoiZWVpbXc5NjgifQ.V2C6pwp7plKnI1GlatOcEAcvlc3lxzD5IBeusQ4iOtxGpWsi2Y4eKlwUzW9YXF0sHBbMeqk3ZXn5GBjRS_UgKA";
+const AUTH_TOKEN: &str = "5eaeeccb0b654f3b9309ca932d8a2425.a1jmribMBQlQ1yjx";
+
+/// 格式化时间为 API 需要的格式：YYYY-MM-DD HH:MM:SS
+fn format_time(secs: i64) -> String {
+    if let Some(datetime) = chrono::DateTime::from_timestamp(secs, 0) {
+        datetime.format("%Y-%m-%d %H:%M:%S").to_string()
+    } else {
+        String::new()
+    }
+}
 
 /// 请求真实 API 获取用量数据
 pub async fn fetch_usage() -> Result<UsageData, String> {
@@ -14,9 +23,20 @@ pub async fn fetch_usage() -> Result<UsageData, String> {
         .build()
         .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
 
+    // 计算时间：当前时间和昨天当前时间
+    let now_secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| format!("Failed to get current time: {}", e))?
+        .as_secs() as i64;
+    let yesterday_secs = now_secs - 86400; // 24 小时前
+
+    let end_time = format_time(now_secs);
+    let start_time = format_time(yesterday_secs);
+
     let response = client
-        .get(API_URL)
-        .header("authorization", AUTH_TOKEN)
+        .get(API_BASE)
+        .query(&[("startTime", start_time), ("endTime", end_time)])
+        .header("Authorization", AUTH_TOKEN)
         .header("Content-Type", "application/json")
         .send()
         .await

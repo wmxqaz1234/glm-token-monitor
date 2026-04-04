@@ -1,13 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useUsageState } from '../composables/useUsageState'
 import { useTauriEvents } from '../composables/useTauriEvents'
-
-// 窗口尺寸常量
-const WINDOW_SIZE_SMALL = 96
-const WINDOW_SIZE_LARGE = 246
-const TRANSITION_DURATION_MS = 350
-const REFRESH_DEBOUNCE_MS = 500
 
 const { usageData, setupEventListener } = useTauriEvents()
 const { petState } = useUsageState(
@@ -34,71 +28,72 @@ const isRefreshing = ref(false)
 const lastUpdateTime = ref<string>('')
 const fetchError = ref<string>('')
 
-// 窗口扩展状态
-const isHovered = ref(false)
+// 悬浮与拖拽相关状态
 const isExpanded = ref(false)
-const refreshDebounce = ref<number | null>(null)
-const isTransitioning = ref(false)
+const isDragging = ref(false)
+const showSidePanel = ref(false)
 
-// 鼠标悬停时扩展窗口并刷新接口
-async function onHoverRefresh() {
-  // 防抖检查
-  if (refreshDebounce.value) return
-
-  refreshDebounce.value = window.setTimeout(() => {
-    refreshDebounce.value = null
-  }, REFRESH_DEBOUNCE_MS)
-
-  // 扩展窗口
-  if (!isExpanded.value) {
-    await expandWindow()
-  }
-
-  // 静默刷新接口
-  await refreshUsageData()
-}
+// 拖动和点击处理
+let dragStartTime = 0
+let dragStartPos = { x: 0, y: 0 }
 
 const startDrag = async (event: MouseEvent) => {
+  console.log('[Drag] mousedown triggered, target:', (event.target as HTMLElement).tagName, 'button:', event.button)
   event.preventDefault()
+  isDragging.value = true
+
+  // 记录拖动开始时间和位置
+  dragStartTime = Date.now()
+  dragStartPos = { x: event.clientX, y: event.clientY }
+
   try {
     const { Window } = await import('@tauri-apps/api/window')
     const win = Window.getCurrent()
+    console.log('[Drag] calling startDragging...')
     await win.startDragging()
+    console.log('[Drag] startDragging completed')
   } catch (error) {
-    console.error('Failed to start dragging:', error)
-  }
-}
-
-// 窗口扩展
-async function expandWindow() {
-  if (isTransitioning.value) return
-  isTransitioning.value = true
-
-  try {
-    const { Window, LogicalSize } = await import('@tauri-apps/api/window')
-    const win = Window.getCurrent()
-    await win.setSize(new LogicalSize(WINDOW_SIZE_LARGE, WINDOW_SIZE_LARGE))
-    isExpanded.value = true
-  } catch (error) {
-    console.error('Failed to expand window:', error)
+    console.error('[Drag] startDragging failed:', error)
   } finally {
+    // 延迟重置，避免 mouseleave 立即触发收缩
     setTimeout(() => {
-      isTransitioning.value = false
-    }, TRANSITION_DURATION_MS)
+      isDragging.value = false
+      console.log('[Drag] isDragging reset to false')
+    }, 200)
   }
 }
 
-// 窗口收缩
-async function collapseWindow() {
+// 点击处理（区分拖动和点击）
+const handleClick = async (event: MouseEvent) => {
+  const dragDuration = Date.now() - dragStartTime
+  const dragDistance = Math.sqrt(
+    Math.pow(event.clientX - dragStartPos.x, 2) +
+    Math.pow(event.clientY - dragStartPos.y, 2)
+  )
+
+  // 如果移动距离小于5px且持续时间小于300ms，认为是点击而非拖动
+  if (dragDistance < 5 && dragDuration < 300) {
+    toggleSidePanel()
+  }
+}
+
+// 切换右侧面板显示
+async function toggleSidePanel() {
+  showSidePanel.value = !showSidePanel.value
+
   try {
     const { Window, LogicalSize } = await import('@tauri-apps/api/window')
     const win = Window.getCurrent()
-    await win.setSize(new LogicalSize(WINDOW_SIZE_SMALL, WINDOW_SIZE_SMALL))
-    isExpanded.value = false
+
+    if (showSidePanel.value) {
+      // 展开面板：调整窗口大小为 96 + 240 = 336px 宽
+      await win.setSize(new LogicalSize(336, 96))
+    } else {
+      // 收起面板：恢复窗口大小为 96px
+      await win.setSize(new LogicalSize(96, 96))
+    }
   } catch (error) {
-    console.error('Failed to collapse window:', error)
-    // 强制重置状态
-    isExpanded.value = false
+    console.error('Toggle side panel failed:', error)
   }
 }
 
@@ -117,36 +112,71 @@ async function refreshUsageData() {
   }
 }
 
-// 鼠标离开时收缩窗口
-async function onHoverLeave() {
-  // 清除防抖定时器
-  if (refreshDebounce.value) {
-    clearTimeout(refreshDebounce.value)
-    refreshDebounce.value = null
-  }
+// 定时刷新数据（1分钟间隔）
+const DATA_REFRESH_INTERVAL = 60000 // 1分钟
+let dataRefreshTimer: number | null = null
 
-  // 收缩窗口
-  await collapseWindow()
+// 定时随机展现心语对话气泡
+const showQuoteBubble = ref(false)
+let quoteTimer: number | null = null
+
+function setupQuoteTimer() {
+  const triggerQuote = () => {
+    if (!isExpanded.value && !isDragging.value) {
+      showQuoteBubble.value = true
+      setTimeout(() => {
+        showQuoteBubble.value = false
+      }, 5000)
+    }
+  }
+  
+  setTimeout(triggerQuote, 2500) // 开场2.5秒展示一次
+  quoteTimer = window.setInterval(triggerQuote, 20000) // 20秒轮询
+}
+
+// 设置定时刷新数据（每1分钟）
+function setupDataRefreshTimer() {
+  // 立即执行一次刷新
+  refreshUsageData()
+
+  // 设置定时器，每1分钟刷新一次
+  dataRefreshTimer = window.setInterval(() => {
+    refreshUsageData()
+  }, DATA_REFRESH_INTERVAL)
 }
 
 onMounted(async () => {
-  await setupEventListener()
+  // 【重要修复】：把启动定时器放到最顶部！防止由于 Tauri 或其他 await 函数执行超时阻塞定时器注册。
+  setupQuoteTimer()
+  setupDataRefreshTimer()
 
-  // 组件卸载时清理
-  return () => {
-    if (refreshDebounce.value) {
-      clearTimeout(refreshDebounce.value)
-    }
+  try {
+    await setupEventListener()
+  } catch (err) {
+    console.error('setupEventListener failed:', err)
   }
+
+  // 强制设置窗口始终置顶，防止失去焦点后被其他窗口遮挡
+  try {
+    const { Window } = await import('@tauri-apps/api/window')
+    const win = Window.getCurrent()
+    await win.setAlwaysOnTop(true)
+  } catch (err) {
+    console.error('Enforce always on top failed:', err)
+  }
+})
+
+onUnmounted(() => {
+  if (quoteTimer) clearInterval(quoteTimer)
+  if (dataRefreshTimer) clearInterval(dataRefreshTimer)
 })
 </script>
 
 <template>
-  <div class="pet-widget" :class="[`pet-${petState.toLowerCase()}`, { expanded: isExpanded }]"
+  <div class="pet-widget" :class="[`pet-${petState.toLowerCase()}`, { expanded: isExpanded, 'side-panel-open': showSidePanel }]"
     data-tauri-drag-region
     @mousedown="startDrag"
-    @mouseenter="onHoverRefresh"
-    @mouseleave="onHoverLeave"
+    @click="handleClick"
   >
     <!-- 光晕层 -->
     <!-- <div class="glow-backdrop"></div> -->
@@ -419,6 +449,74 @@ onMounted(async () => {
         <div v-if="lastUpdateTime" class="hm-time">⟳ {{ lastUpdateTime }}</div>
       </template>
     </div>
+
+    <!-- 独立的定时心语对话框（置于底部并指向上方） -->
+    <transition name="bubble-fade">
+      <div v-if="showQuoteBubble && !isExpanded" class="pixel-bubble quote-bubble" :class="`bubble-${petState.toLowerCase()}`">
+        <span class="bubble-val quote-text">{{ heartMsg }}</span>
+      </div>
+    </transition>
+
+    <!-- 常驻的 Token 容量像素气泡（置于右上） -->
+    <div class="pixel-bubble token-mode" :class="`bubble-${petState.toLowerCase()}`">
+      5h: <span class="bubble-val">{{ 100 - tokensPercent }}%</span>
+    </div>
+
+    <!-- 右侧信息面板 -->
+    <transition name="side-panel-slide">
+      <div v-if="showSidePanel" class="side-info-panel">
+        <div class="panel-header">
+          <span class="panel-title">📊 用量详情</span>
+          <button class="panel-close" @click.stop="toggleSidePanel">×</button>
+        </div>
+        <div class="panel-content">
+          <!-- 状态心语 -->
+          <div class="panel-section">
+            <div class="section-label">💭 状态</div>
+            <div class="heart-text-large">{{ heartMsg }}</div>
+          </div>
+
+          <!-- 月度额度 -->
+          <div class="panel-section">
+            <div class="section-label">🗓️ 月度额度</div>
+            <div class="metric-row">
+              <div class="metric-info">
+                <span class="metric-percent">{{ timePercent }}%</span>
+                <span class="metric-remaining">剩余 {{ timeRemaining }} 次</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" :class="`progress-${petState.toLowerCase()}`" :style="{ width: timePercent + '%' }"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5小时额度 -->
+          <div class="panel-section">
+            <div class="section-label">⏱️ 5小时额度</div>
+            <div class="metric-row">
+              <div class="metric-info">
+                <span class="metric-percent">{{ tokensPercent }}%</span>
+                <span class="metric-remaining">剩余 {{ 100 - tokensPercent }}%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill progress-tokens" :style="{ width: tokensPercent + '%' }"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 最后更新时间 -->
+          <div class="panel-section">
+            <div class="section-label">🔄 最后更新</div>
+            <div class="update-time">{{ lastUpdateTime || '加载中...' }}</div>
+          </div>
+
+          <!-- 错误提示 -->
+          <div v-if="fetchError" class="panel-section">
+            <div class="error-message">⚠ {{ fetchError }}</div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -435,11 +533,17 @@ onMounted(async () => {
   cursor: pointer;
   user-select: none;
   pointer-events: auto;
-  -webkit-app-region: drag;
-  app-region: drag;
+  border-radius: 50%;
   transition: width 350ms ease-out, height 350ms ease-out;
+  -webkit-app-region: drag;
 }
 .pet-widget:active { cursor: pointer; }
+
+/* 扩展状态下的窗口大小 */
+.pet-widget.expanded {
+  width: 246px;
+  height: 246px;
+}
 
 /* ── 光晕层 ── */
 .glow-backdrop {
@@ -447,7 +551,6 @@ onMounted(async () => {
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
-  -webkit-app-region: no-drag;
 }
 
 .pet-fresh .glow-backdrop {
@@ -681,6 +784,7 @@ onMounted(async () => {
   overflow: hidden;
   padding: 6px 9px;
 }
+/* 鼠标悬停不再触发面板显示 */
 .pet-widget.expanded .heart-msg {
   opacity: 1;
 }
@@ -778,5 +882,310 @@ onMounted(async () => {
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ── Token 剩余容量像素气泡 (Retro Bubble) ── */
+.pixel-bubble {
+  position: absolute;
+  top: 10px;
+  right: 6px;
+  background: #0F172A; /* 深色背景以提升对比度 */
+  border: 2px solid #334155;
+  /* 经典的像素风硬阴影 */
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+  padding: 3px 6px; /* 内边距 */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; /* 无衬线等宽字体 */
+  font-size: 10px; /* 增大字号 */
+  font-weight: 700;
+  letter-spacing: 0.5px; /* 字间距 */
+  color: #94A3B8; /* 前缀 'Tk:' 的颜色 */
+  z-index: 15;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 3px;
+  /* 悬浮微动效 */
+  animation: float-bubble 2s ease-in-out infinite alternate;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 气泡对话框的尾巴 (外侧边缘) */
+.pixel-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 6px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid #334155;
+  border-bottom: 6px solid transparent;
+}
+
+/* 气泡对话框的尾巴 (内侧留白) */
+.pixel-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -2.5px;
+  left: 8.5px;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid #0F172A;
+  border-bottom: 3.5px solid transparent;
+  z-index: 1;
+}
+
+/* 悬浮面板展开时的样式变化 */
+.pet-widget.expanded .pixel-bubble {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.8);
+}
+
+/* 长文本的心语模式特定样式扩展（置于极左上角，彻底脱离猫咪身体） */
+.quote-bubble {
+  left: 2px; 
+  right: auto;
+  top: 2px;
+  bottom: auto; 
+  max-width: 58px; /* 留出右上角的 Token 空间 */
+  white-space: normal;
+  text-align: left; /* 多行长文本左对齐优先 */
+  line-height: 1.25; /* 缩小行高压缩排版 */
+  padding: 3px 5px; /* 压缩内间距释放内部空间 */
+  border-radius: 4px;
+  justify-content: flex-start;
+  overflow-wrap: break-word;
+  z-index: 50; /* 提供极高层级覆盖率，避免被任何图形截掉 */
+}
+/* 将尾巴向右平挪，依旧指向下方偏中间的核心动物身段 */
+.quote-bubble::after { 
+  top: auto; 
+  bottom: -6px; 
+  left: 25px; 
+  border-bottom: 6px solid transparent; 
+  border-left: 6px solid #334155; 
+  border-right: none; 
+  border-top: none;
+}
+.quote-bubble::before { 
+  top: auto; 
+  bottom: -2.5px; 
+  left: 27.5px; 
+  border-bottom: 3.5px solid transparent; 
+  border-left: 3.5px solid #0F172A; 
+  border-right: none; 
+  border-top: none;
+}
+
+.quote-text {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 7.5px; /* 极限压缩字号，允许四行中文安全展示 */
+  font-weight: 500; /* 反加粗，减少水平体积 */
+  letter-spacing: normal; 
+}
+
+/* Vue 依靠基础的 transition 就能平滑处理，只需定义从/去状态 */
+.bubble-fade-enter-from,
+.bubble-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.7) translateY(6px);
+}
+
+@keyframes float-bubble {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
+
+/* 高对比度的亮色系带点微发光 */
+.bubble-fresh .bubble-val { color: #34D399; text-shadow: 0 0 3px rgba(52,211,153,0.3); }
+.bubble-flow .bubble-val { color: #60A5FA; text-shadow: 0 0 3px rgba(96,165,250,0.3); }
+.bubble-warning .bubble-val { color: #FBBF24; text-shadow: 0 0 3px rgba(251,191,36,0.3); }
+.bubble-panic .bubble-val { color: #F87171; text-shadow: 0 0 3px rgba(248,113,113,0.4); }
+.bubble-panic {
+  /* 恐慌状态抖动 */
+  animation: float-bubble 0.4s ease-in-out infinite alternate, shake-bubble 0.2s infinite;
+}
+.bubble-dead .bubble-val { color: #9CA3AF; }
+
+@keyframes shake-bubble {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(1px); }
+  75% { transform: translateX(-1px); }
+  100% { transform: translateX(0); }
+}
+
+/* ── 右侧信息面板 ── */
+.pet-widget.side-panel-open {
+  width: 336px;
+  border-radius: 12px;
+}
+
+.side-info-panel {
+  position: absolute;
+  left: 96px;
+  top: 0;
+  width: 240px;
+  height: 96px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 0 12px 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(30, 41, 59, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panel-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #E2E8F0;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.panel-close {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: rgba(239, 68, 68, 0.2);
+  color: #F87171;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.panel-close:hover {
+  background: rgba(239, 68, 68, 0.4);
+  transform: scale(1.1);
+}
+
+.panel-content {
+  flex: 1;
+  padding: 8px 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.section-label {
+  font-size: 8px;
+  color: #94A3B8;
+  font-weight: 500;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.heart-text-large {
+  font-size: 9px;
+  color: #CBD5E1;
+  line-height: 1.4;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.metric-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metric-percent {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.metric-remaining {
+  font-size: 8px;
+  color: #94A3B8;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.progress-fresh { background: linear-gradient(90deg, #10B981, #34D399); }
+.progress-flow { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+.progress-warning { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.progress-panic { background: linear-gradient(90deg, #EF4444, #F87171); }
+.progress-dead { background: linear-gradient(90deg, #6B7280, #9CA3AF); }
+.progress-tokens { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+
+.update-time {
+  font-size: 8px;
+  color: #64748B;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.error-message {
+  font-size: 8px;
+  color: #F87171;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1.3;
+}
+
+/* 侧边面板滑入动画 */
+.side-panel-slide-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.side-panel-slide-enter-to {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.side-panel-slide-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.side-panel-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.side-panel-slide-enter-active,
+.side-panel-slide-leave-active {
+  transition: all 0.3s ease-out;
 }
 </style>
