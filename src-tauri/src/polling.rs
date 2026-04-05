@@ -1,11 +1,8 @@
 use crate::events::{ApiResponse, UsageData, EVENT_USAGE_UPDATE};
+use crate::config::get_active_model_config;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter};
 use tokio::time::interval;
-
-const API_BASE: &str = "https://open.bigmodel.cn/api/monitor/usage/quota/limit";
-// TODO: 生产环境应从配置文件或环境变量读取
-const AUTH_TOKEN: &str = "5eaeeccb0b654f3b9309ca932d8a2425.a1jmribMBQlQ1yjx";
 
 /// 格式化时间为 API 需要的格式：YYYY-MM-DD HH:MM:SS
 fn format_time(secs: i64) -> String {
@@ -17,7 +14,9 @@ fn format_time(secs: i64) -> String {
 }
 
 /// 请求真实 API 获取用量数据
-pub async fn fetch_usage() -> Result<UsageData, String> {
+pub async fn fetch_usage(app: &AppHandle) -> Result<UsageData, String> {
+    // 从配置读取 API 参数
+    let model_config = get_active_model_config(app)?;
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
@@ -34,9 +33,9 @@ pub async fn fetch_usage() -> Result<UsageData, String> {
     let start_time = format_time(yesterday_secs);
 
     let response = client
-        .get(API_BASE)
+        .get(&model_config.api_url())
         .query(&[("startTime", start_time), ("endTime", end_time)])
-        .header("Authorization", AUTH_TOKEN)
+        .header("Authorization", &model_config.api_key)
         .header("Content-Type", "application/json")
         .send()
         .await
@@ -98,12 +97,16 @@ pub async fn fetch_usage() -> Result<UsageData, String> {
     })
 }
 
-/// 启动轮询循环（每 5 分钟刷新一次）
+/// 启动轮询循环（从配置读取间隔）
 pub async fn start_polling_loop(app: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    // 启动时立即拉取一次，无需等待 5 分钟
+    // 启动时立即拉取一次
     emit_usage(&app).await;
 
-    let mut timer = interval(Duration::from_secs(300)); // 5 分钟
+    // 从配置读取轮询间隔
+    let config = crate::config::load_config(&app)?;
+    let interval_secs = config.polling_config.interval_minutes * 60;
+
+    let mut timer = interval(Duration::from_secs(interval_secs));
     timer.tick().await; // 跳过第一个立即触发的 tick
 
     loop {
@@ -113,7 +116,7 @@ pub async fn start_polling_loop(app: AppHandle) -> Result<(), Box<dyn std::error
 }
 
 pub async fn emit_usage(app: &AppHandle) {
-    match fetch_usage().await {
+    match fetch_usage(app).await {
         Ok(data) => {
             if let Err(e) = app.emit(EVENT_USAGE_UPDATE, data) {
                 eprintln!("Failed to emit usage update: {}", e);

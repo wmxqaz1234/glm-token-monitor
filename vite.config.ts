@@ -16,7 +16,8 @@ export default defineConfig(async () => ({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        'info-panel': path.resolve(__dirname, 'src-tauri/info-panel.html')
+        'info-panel': path.resolve(__dirname, 'src-tauri/info-panel.html'),
+        'settings': path.resolve(__dirname, 'src-tauri/settings.html')
       }
     }
   }

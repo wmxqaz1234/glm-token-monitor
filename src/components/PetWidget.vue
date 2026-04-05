@@ -81,6 +81,13 @@ const handleClick = async (event: MouseEvent) => {
   }
 }
 
+// 双击处理 - 阻止全屏
+const handleDblClick = (event: MouseEvent) => {
+  console.log('[DblClick] Preventing default behavior')
+  event.preventDefault()
+  event.stopPropagation()
+}
+
 // 静默刷新数据（不显示加载提示）
 async function refreshUsageData() {
   try {
@@ -161,7 +168,7 @@ onUnmounted(() => {
     data-tauri-drag-region
     @mousedown="startDrag"
     @click="handleClick"
-    @dblclick.prevent
+    @dblclick.prevent="handleDblClick"
   >
     <!-- 光晕层 -->
     <!-- <div class="glow-backdrop"></div> -->

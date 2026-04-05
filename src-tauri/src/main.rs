@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod config;
 mod events;
 mod polling;
 mod commands;
+mod settings_commands;
 mod tray;
 mod windows;
 
@@ -13,7 +15,12 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_current_usage,
             windows::open_info_panel,
-            windows::close_info_panel
+            windows::close_info_panel,
+            windows::open_settings_panel,
+            windows::close_settings_panel,
+            settings_commands::get_config,
+            settings_commands::save_config_handler,
+            settings_commands::test_api_connection,
         ])
         .setup(|app| {
             // Windows 平台：设置完全透明无边框窗口
@@ -26,14 +33,18 @@ pub fn run() {
                 }
             }
 
-            // 创建系统托盘（macOS）
-            #[cfg(target_os = "macos")]
-            if let Err(e) = tray::create_system_tray(app) {
+            // 初始化配置（确保配置文件存在）
+            if let Err(e) = config::load_config(app.handle()) {
+                eprintln!("Failed to initialize config: {}", e);
+            }
+
+            // 创建系统托盘（Windows 和 macOS）
+            let app_handle = app.handle().clone();
+            if let Err(e) = tray::create_system_tray(&app_handle) {
                 eprintln!("System tray error: {}", e);
             }
 
             // 启动轮询服务
-            let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = polling::start_polling_loop(app_handle).await {
                     eprintln!("Polling loop error: {}", e);

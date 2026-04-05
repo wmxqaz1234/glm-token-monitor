@@ -109,3 +109,27 @@ pub async fn close_info_panel(app_handle: tauri::AppHandle) -> Result<(), String
     }
     Ok(())
 }
+
+/// 打开设置面板窗口
+#[tauri::command]
+pub async fn open_settings_panel(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("settings") {
+        window.center()
+            .map_err(|e| format!("Failed to center settings window: {}", e))?;
+        window.show()
+            .map_err(|e| format!("Failed to show settings window: {}", e))?;
+        window.set_focus()
+            .map_err(|e| format!("Failed to focus settings window: {}", e))?;
+    }
+    Ok(())
+}
+
+/// 关闭设置面板窗口
+#[tauri::command]
+pub async fn close_settings_panel(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("settings") {
+        window.hide()
+            .map_err(|e| format!("Failed to hide settings window: {}", e))?;
+    }
+    Ok(())
+}

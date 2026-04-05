@@ -24,7 +24,7 @@
         "transparent": true,
         "alwaysOnTop": true,
         "resizable": true,
-        "skipTaskbar": false,
+        "skipTaskbar": true,
         "center": true,
         "visible": true,
         "backgroundColor": "#00000000",
@@ -47,6 +47,21 @@
         "url": "src-tauri/info-panel.html",
         "backgroundColor": "#00000000",
         "shadow": false
+      },
+      {
+        "label": "settings",
+        "title": "PlanGuard 设置",
+        "width": 480,
+        "height": 520,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": false,
+        "resizable": false,
+        "visible": false,
+        "skipTaskbar": false,
+        "url": "src-tauri/settings.html",
+        "backgroundColor": "#00000000",
+        "shadow": true
       }
     ],
     "withGlobalTauri": true,
