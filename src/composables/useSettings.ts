@@ -73,7 +73,7 @@ export function useSettings() {
 
       // [HOTFIX] Bypass strict Tauri Event capabilities by using native Web BroadcastChannel
       try {
-        const bc = new BroadcastChannel('planguard_config')
+        const bc = new BroadcastChannel('glm-token-monitor_config')
         bc.postMessage(JSON.parse(JSON.stringify(config.value)))
         bc.close()
       } catch (e) {
@@ -123,7 +123,7 @@ export function useSettings() {
     console.log('[DEBUG useSettings] Adding listeners...')
 
     // [HOTFIX] Native Web BroadcastChannel as primary fallback!
-    const bcListener = new BroadcastChannel('planguard_config')
+    const bcListener = new BroadcastChannel('glm-token-monitor_config')
     bcListener.onmessage = async (event) => {
       if (event.data) {
         Object.assign(config.value, event.data)
@@ -185,6 +185,12 @@ export function useSettings() {
     }
   }
 
+  // 检查是否配置了 API Key
+  const hasApiKey = computed(() => {
+    const key = activeModel.value?.api_key || ''
+    return key && key.trim().length > 0
+  })
+
   return {
     config,
     isLoading,
@@ -192,6 +198,7 @@ export function useSettings() {
     testResult,
     activeModel,
     availableModels,
+    hasApiKey,
     loadConfig,
     saveConfig,
     switchModel,

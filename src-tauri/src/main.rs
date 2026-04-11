@@ -18,6 +18,7 @@ pub fn run() {
             windows::close_info_panel,
             windows::open_settings_panel,
             windows::close_settings_panel,
+            windows::resize_main_window,
             settings_commands::get_config,
             settings_commands::save_config_handler,
             settings_commands::test_api_connection,

@@ -3,9 +3,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useTauriEvents } from '../composables/useTauriEvents'
 import { useTheme } from '../composables/useTheme'
+import { useSettings } from '../composables/useSettings'
 
 const { usageData, setupEventListener } = useTauriEvents()
 const { currentTheme, initTheme } = useTheme()
+const { hasApiKey } = useSettings()
 
 // 双指标数据
 const timePercent = computed(() => usageData.value.time_percent ?? 0)
@@ -76,6 +78,15 @@ async function closeWindow() {
     await invoke('close_info_panel')
   } catch (err) {
     console.error('Close window failed:', err)
+  }
+}
+
+// 打开设置窗口
+async function openSettings() {
+  try {
+    await invoke('open_settings_panel')
+  } catch (err) {
+    console.error('Open settings failed:', err)
   }
 }
 
@@ -177,8 +188,23 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- 未配置 API 提示 -->
+      <div v-if="!hasApiKey" class="api-config-notice">
+        <div class="notice-icon">🔑</div>
+        <div class="notice-content">
+          <div class="notice-title">需要配置 API Key</div>
+          <div class="notice-desc">请先配置 API Key 才能查看使用量</div>
+        </div>
+        <button class="notice-btn" @click="openSettings">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 15l5-5m0 0l-5 5m5-5H9"/>
+          </svg>
+          去设置
+        </button>
+      </div>
+
       <!-- 错误提示 -->
-      <div v-if="fetchError" class="error-bar">
+      <div v-else-if="fetchError" class="error-bar">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"/>
           <path d="M12 8v4M12 16h.01"/>
@@ -615,5 +641,111 @@ onUnmounted(() => {
 
 .error-bar svg {
   flex-shrink: 0;
+}
+
+/* ── API 配置提示 ── */
+.api-config-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  margin: 0 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notice-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.notice-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notice-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+.notice-desc {
+  font-size: 10px;
+  color: #a1a1aa;
+}
+
+.notice-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 8px;
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.notice-btn:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.6);
+  transform: translateY(-1px);
+}
+
+.notice-btn:active {
+  transform: translateY(0);
+}
+
+.info-panel[data-theme="light"] .api-config-notice {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.info-panel[data-theme="light"] .notice-title {
+  color: #3b82f6;
+}
+
+.info-panel[data-theme="light"] .notice-desc {
+  color: #737373;
+}
+
+.info-panel[data-theme="light"] .notice-btn {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3b82f6;
+}
+
+.info-panel[data-theme="light"] .notice-btn:hover {
+  background: rgba(59, 130, 246, 0.25);
 }
 </style>

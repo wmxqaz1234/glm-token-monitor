@@ -29,7 +29,7 @@ pub fn create_system_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Err
     let _tray = TrayIconBuilder::with_id("main-tray")
         .icon(icon)
         .menu(&menu)
-        .tooltip("PlanGuard - Token Monitor")
+        .tooltip("glm-token-monitor - Token Monitor")
         .build(app)?;
 
     // 处理托盘菜单事件

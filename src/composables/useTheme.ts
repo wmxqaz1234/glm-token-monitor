@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { useSettings } from './useSettings'
 
-const THEME_KEY = 'planguard_theme'
+const THEME_KEY = 'glm-token-monitor_theme'
 
 // 全局主题状态
 const currentTheme = ref<'dark' | 'light'>('dark')

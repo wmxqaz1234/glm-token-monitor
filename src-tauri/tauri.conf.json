@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2.0.0",
-  "productName": "PlanGuard",
+  "productName": "glm-token-monitor",
   "version": "0.1.0",
-  "identifier": "com.planguard.app",
+  "identifier": "com.glmtoken.monitor",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -14,16 +14,16 @@
       {
         "title": "",
         "label": "main",
-        "width": 96,
-        "height": 96,
-        "minWidth": 96,
-        "minHeight": 96,
-        "maxWidth": 96,
-        "maxHeight": 96,
+        "width": 120,
+        "height": 120,
+        "minWidth": 120,
+        "minHeight": 120,
+        "maxWidth": 280,
+        "maxHeight": 140,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
-        "resizable": true,
+        "resizable": false,
         "skipTaskbar": true,
         "center": true,
         "visible": true,
@@ -44,13 +44,13 @@
         "resizable": false,
         "visible": false,
         "skipTaskbar": true,
-        "url": "src-tauri/info-panel.html",
+        "url": "../windows/info-panel.html",
         "backgroundColor": "#00000000",
         "shadow": false
       },
       {
         "label": "settings",
-        "title": "PlanGuard 设置",
+        "title": "glm-token-monitor 设置",
         "width": 680,
         "height": 600,
         "decorations": false,
@@ -59,7 +59,7 @@
         "resizable": true,
         "visible": false,
         "skipTaskbar": false,
-        "url": "src-tauri/settings.html",
+        "url": "../windows/settings.html",
         "backgroundColor": "#12141c",
         "shadow": true
       }
@@ -70,8 +70,17 @@
     }
   },
   "bundle": {
-    "active": false,
+    "active": true,
     "targets": "all",
-    "icon": []
+    "icon": [
+      "icons/icon-circle-16x16.png",
+      "icons/icon-circle-32x32.png",
+      "icons/icon-circle-48x48.png",
+      "icons/icon-circle-64x64.png",
+      "icons/icon-circle-128x128.png",
+      "icons/icon-circle-256x256.png",
+      "icons/icon-circle-512x512.png",
+      "icons/icon.ico"
+    ]
   }
 }

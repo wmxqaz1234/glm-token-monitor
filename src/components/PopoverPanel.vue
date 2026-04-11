@@ -61,7 +61,7 @@ function togglePanel() {
           </div>
         </div>
         <div class="header-info">
-          <h3 class="app-title">PlanGuard</h3>
+          <h3 class="app-title">glm-token-monitor</h3>
           <div class="state-badge" :style="{ backgroundColor: stateColor }">
             {{ stateText }}
           </div>

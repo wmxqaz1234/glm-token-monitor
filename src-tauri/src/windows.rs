@@ -1,4 +1,20 @@
-use tauri::{WebviewWindow, Manager, Emitter};
+use tauri::{WebviewWindow, Manager};
+
+/// 调整主窗口大小
+#[tauri::command]
+pub async fn resize_main_window(
+    window: WebviewWindow,
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
+    window
+        .set_size(tauri::Size::Logical(tauri::LogicalSize {
+            width: width as f64,
+            height: height as f64,
+        }))
+        .map_err(|e| format!("Failed to resize window: {}", e))?;
+    Ok(())
+}
 
 /// 打开信息面板窗口
 #[tauri::command]

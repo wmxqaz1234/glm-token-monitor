@@ -15,7 +15,7 @@ import JellySpirit from './pets/JellySpirit.vue'
 import PixelGhost from './pets/PixelGhost.vue'
 
 const { displayMode } = useDisplayMode()
-const { loadConfig, setupConfigListener, config, basicConfig } = useSettings()
+const { loadConfig, setupConfigListener, config, basicConfig, hasApiKey } = useSettings()
 const { usageData, setupEventListener } = useTauriEvents()
 
 // 计算是否显示光晕层
@@ -109,9 +109,15 @@ const handleClick = async (event: MouseEvent) => {
   if (dragDistance < 5 && dragDuration < 300) {
     try {
       const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('open_info_panel')
+
+      // 如果未配置 API，打开设置面板；否则打开信息面板
+      if (!hasApiKey.value) {
+        await invoke('open_settings_panel')
+      } else {
+        await invoke('open_info_panel')
+      }
     } catch (err) {
-      console.error('Open info panel failed:', err)
+      console.error('Open panel failed:', err)
     }
   }
 }
@@ -144,20 +150,64 @@ let dataRefreshTimer: number | null = null
 
 // 定时随机展现心语对话气泡
 const showQuoteBubble = ref(false)
+const showApiConfigBubble = ref(false)
 let quoteTimer: number | null = null
 
+// 监听气泡状态变化，动态调整窗口大小
+watch(showApiConfigBubble, async (isVisible) => {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+
+    if (isVisible) {
+      // 气泡显示：扩大窗口
+      await invoke('resize_main_window', {
+        width: 280,
+        height: 140
+      })
+    } else {
+      // 气泡隐藏：恢复小窗口
+      await invoke('resize_main_window', {
+        width: 120,
+        height: 120
+      })
+    }
+  } catch (err) {
+    console.error('Failed to resize window:', err)
+  }
+})
+
 function setupQuoteTimer() {
-  // const triggerQuote = () => {
-  //   if (!isExpanded.value && !isDragging.value) {
-  //     showQuoteBubble.value = true
-  //     setTimeout(() => {
-  //       showQuoteBubble.value = false
-  //     }, 5000)
-  //   }
-  // }
-  
-  // setTimeout(triggerQuote, 2500) // 开场2.5秒展示一次
-  // quoteTimer = window.setInterval(triggerQuote, 20000) // 20秒轮询
+  // 延迟检查 API 配置状态
+  setTimeout(() => {
+    if (!hasApiKey.value) {
+      showApiConfigBubble.value = true
+
+      // 10秒后自动隐藏
+      setTimeout(() => {
+        showApiConfigBubble.value = false
+      }, 10000)
+
+      // 用户点击宠物或气泡后也会隐藏
+      const hideBubble = () => {
+        showApiConfigBubble.value = false
+        document.removeEventListener('mousedown', hideBubble)
+      }
+      // 延迟绑定监听器，避免立即触发
+      setTimeout(() => {
+        document.addEventListener('mousedown', hideBubble, { once: true })
+      }, 100)
+    }
+  }, 2000) // 2秒后显示
+}
+
+// 打开设置窗口
+async function openSettings() {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    await invoke('open_settings_panel')
+  } catch (err) {
+    console.error('Open settings failed:', err)
+  }
 }
 
 // 设置定时刷新数据（每1分钟）
@@ -222,7 +272,7 @@ onUnmounted(() => {
     @dblclick.prevent="handleDblClick"
   >
     <!-- 光晕层 -->
-    <div v-if="showGlowEffect" class="glow-backdrop"></div>
+    <!-- <div v-if="showGlowEffect" class="glow-backdrop"></div> -->
 
     <!-- 动态宠物动作组件 -->
     <JellySpirit v-if="petType === 'spirit'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :width="100" :height="100" />
@@ -274,6 +324,23 @@ onUnmounted(() => {
         @click.stop
         @dblclick.stop>
         <span class="bubble-val quote-text">{{ heartMsg }}</span>
+      </div>
+    </transition>
+
+    <!-- API 配置提示气泡（侧边悬浮卡片） -->
+    <transition name="bubble-fade">
+      <div v-if="showApiConfigBubble && !isExpanded" class="pixel-bubble api-config-bubble"
+        @mousedown.stop
+        @click="openSettings"
+        @dblclick.stop>
+        <div class="bubble-header">
+          <span class="bubble-icon">🔑</span>
+          <span class="bubble-title-short">配置 API</span>
+        </div>
+        <div class="bubble-desc">请先配置 API Key</div>
+        <div class="bubble-action">
+          去设置 →
+        </div>
       </div>
     </transition>
 
@@ -330,15 +397,17 @@ onUnmounted(() => {
   height: 120px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* 改为左对齐，宠物固定在左侧 */
   background: transparent !important;
   position: relative;
   cursor: pointer;
   user-select: none;
   pointer-events: auto;
   border-radius: 8px;
-  overflow: hidden;
+  /* 允许气泡溢出显示在容器外部 */
+  overflow: visible;
   -webkit-app-region: drag;
+  padding-left: 20px; /* 宠物距离左边20px，居中于120px窗口 */
 }
 .pet-widget:active { cursor: pointer; }
 
@@ -346,7 +415,7 @@ onUnmounted(() => {
 .pet-widget.expanded {
   width: 246px;
   height: 246px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* ── 光晕层 ── */
@@ -819,6 +888,133 @@ onUnmounted(() => {
   25% { transform: translateX(1px); }
   75% { transform: translateX(-1px); }
   100% { transform: translateX(0); }
+}
+
+/* ── API 配置提示气泡（侧边悬浮卡片）── */
+.api-config-bubble {
+  position: absolute;
+  left: 120px; /* 从容器右边缘开始（120px是宠物窗口宽度） */
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%); /* 只需要垂直居中 */
+  min-width: 140px;
+  max-width: 140px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(26, 52, 84, 0.95) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 1000;
+  animation: slideInRight 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), api-float 3s ease-in-out infinite;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 12px rgba(59, 130, 246, 0.3);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.api-config-bubble::after {
+  /* 左侧箭头指向宠物 */
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-right: 6px solid #3b82f6;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
+.api-config-bubble:hover {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(29, 78, 216, 0.95) 100%);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(59, 130, 246, 0.5);
+  transform: translateY(-50%) translateX(5px) scale(1.02);
+}
+
+.api-config-bubble .bubble-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.api-config-bubble .bubble-icon {
+  font-size: 20px;
+  animation: key-shake 0.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.5));
+}
+
+.api-config-bubble .bubble-title-short {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #60a5fa;
+  line-height: 1.2;
+  text-shadow: 0 0 6px rgba(59, 130, 246, 0.4);
+}
+
+.api-config-bubble .bubble-desc {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 9px;
+  color: #a1a1aa;
+  line-height: 1.3;
+}
+
+.api-config-bubble .bubble-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: #60a5fa;
+  margin-top: 2px;
+  padding: 6px 8px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 5px;
+  transition: all 0.2s ease;
+}
+
+.api-config-bubble:hover .bubble-action {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(10px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+@keyframes api-float {
+  0%, 100% {
+    transform: translateY(-50%) translateX(0);
+  }
+  50% {
+    transform: translateY(calc(-50% - 2px)) translateX(0);
+  }
+}
+
+@keyframes key-shake {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-12deg);
+  }
+  75% {
+    transform: rotate(12deg);
+  }
 }
 
 /* ── Display Modes Base ── */

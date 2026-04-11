@@ -37,11 +37,11 @@ pub async fn set_auto_start(app: AppHandle, enabled: bool) -> Result<(), String>
         // 使用 PowerShell 设置注册表启动项
         let ps_script = if enabled {
             format!(
-                "New-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'PlanGuard' -Value '{}' -PropertyType String -Force",
+                "New-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'glm-token-monitor' -Value '{}' -PropertyType String -Force",
                 exe_path_str.replace("\\", "\\\\")
             )
         } else {
-            "Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'PlanGuard' -ErrorAction SilentlyContinue".to_string()
+            "Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'glm-token-monitor' -ErrorAction SilentlyContinue".to_string()
         };
 
         let result = std::process::Command::new("powershell")
@@ -68,7 +68,7 @@ pub async fn set_auto_start(app: AppHandle, enabled: bool) -> Result<(), String>
 
         let plist_path = dirs::home_dir()
             .ok_or_else(|| "Failed to get home directory".to_string())?
-            .join("Library/LaunchAgents/com.planguard.app.plist");
+            .join("Library/LaunchAgents/com.glm-token-monitor.app.plist");
 
         if enabled {
             // 创建 LaunchAgent plist 文件
@@ -78,7 +78,7 @@ pub async fn set_auto_start(app: AppHandle, enabled: bool) -> Result<(), String>
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.planguard.app</string>
+    <string>com.glm-token-monitor.app</string>
     <key>ProgramArguments</key>
     <array>
         <string>{}</string>
@@ -118,15 +118,15 @@ pub async fn set_auto_start(app: AppHandle, enabled: bool) -> Result<(), String>
                 .map_err(|e| format!("Failed to create autostart directory: {}", e))?;
         }
 
-        let desktop_file = autostart_dir.join("planguard.desktop");
+        let desktop_file = autostart_dir.join("glm-token-monitor.desktop");
 
         if enabled {
             let desktop_content = format!(
                 r#"[Desktop Entry]
 Type=Application
-Name=PlanGuard
+Name=glm-token-monitor
 Exec={}
-Icon=planguard
+Icon=glm-token-monitor
 Terminal=false
 X-MultipleArgs=false
 Categories=Utility;

@@ -115,7 +115,35 @@ npm install
 npm run tauri:dev
 
 # 4. 构建生产版本
-npm run tauri:build
+
+## 快速打包（推荐）
+
+**Windows 用户**:
+```bash
+# 双击运行打包脚本
+scripts\build.bat
+```
+
+**Linux/macOS 用户**:
+```bash
+# 运行打包脚本
+chmod +x scripts/build.sh
+./scripts/build.sh
+```
+
+## 手动打包
+
+```bash
+# 完整打包（包含前端和 Rust）
+npm run tauri build
+
+# 或仅打包 Rust 部分（前端已构建）
+cd src-tauri
+cargo build --release
+```
+
+**📖 详细打包指南**: 查看 [docs/打包指南.md](docs/打包指南.md)
+
 ```
 
 构建完成后，安装包位于 `src-tauri/target/release/bundle/` 目录。

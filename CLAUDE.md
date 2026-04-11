@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-PlanGuard 是一个跨平台桌面 API 配额监控应用，通过可爱的电子宠物和多种显示模式，实时展示 API 使用量。
+glm-token-monitor 是一个跨平台桌面 API 配额监控应用，通过可爱的电子宠物和多种显示模式，实时展示 API 使用量。
 
 - **Windows**: 96x96 透明悬浮窗，支持手动拖动，点击显示详情面板
 - **macOS**: 系统托盘 + 气泡面板（待实现）
