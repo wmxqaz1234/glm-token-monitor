@@ -1,27 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
 interface Props {
-  state: 'Fresh' | 'Flow' | 'Warning' | 'Panic' | 'Dead'
+  color: string          // 主色
+  strokeColor: string    // 描边色
+  eyeColor?: string      // 眼睛颜色（可选，默认深色）
   width?: number
   height?: number
+  state?: 'Fresh' | 'Flow' | 'Warning' | 'Panic' | 'Dead'  // 仅用于动画
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  eyeColor: '#1F2937',
   width: 100,
   height: 100
 })
-
-// 颜色配置
-const colors = {
-  Fresh:  { fill: '#10B981', stroke: '#059669', eye: '#1F2937', blush: '#34D399' },
-  Flow:   { fill: '#3B82F6', stroke: '#2563EB', eye: '#1F2937', blush: '#60A5FA' },
-  Warning:{ fill: '#F59E0B', stroke: '#D97706', eye: '#1F2937', blush: '#FBBF24' },
-  Panic:  { fill: '#EF4444', stroke: '#DC2626', eye: '#1F2937', blush: '#F87171' },
-  Dead:   { fill: '#9CA3AF', stroke: '#6B7280', eye: '#6B7280', blush: '#9CA3AF' }
-}
-
-const currentColors = computed(() => colors[props.state])
 </script>
 
 <template>
@@ -80,7 +71,7 @@ const currentColors = computed(() => colors[props.state])
         />
 
         <!-- 幽灵身体 - 圆润波浪底部 -->
-        <path :fill="currentColors.fill" :stroke="currentColors.stroke" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+        <path :fill="props.color" :stroke="props.strokeColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
           d="M 18 14
              Q 32 12 46 14
              Q 50 14 50 18
@@ -128,7 +119,7 @@ const currentColors = computed(() => colors[props.state])
         <ellipse cx="24" cy="20" rx="5" ry="3.5" fill="white" opacity="0.3"/>
 
         <!-- 腮红 -->
-        <ellipse cx="19" cy="30" rx="4" ry="2.5" :fill="currentColors.blush" opacity="0.35">
+        <ellipse cx="19" cy="30" rx="4" ry="2.5" :fill="props.color" opacity="0.35">
           <animate
             attributeName="opacity"
             values="0.3;0.5;0.3"
@@ -136,7 +127,7 @@ const currentColors = computed(() => colors[props.state])
             repeatCount="indefinite"
           />
         </ellipse>
-        <ellipse cx="45" cy="30" rx="4" ry="2.5" :fill="currentColors.blush" opacity="0.35">
+        <ellipse cx="45" cy="30" rx="4" ry="2.5" :fill="props.color" opacity="0.35">
           <animate
             attributeName="opacity"
             values="0.3;0.5;0.3"
@@ -148,7 +139,7 @@ const currentColors = computed(() => colors[props.state])
 
         <!-- 左眼 -->
         <g class="eye-group">
-          <ellipse cx="24" cy="26" rx="6" ry="6.5" :fill="currentColors.eye">
+          <ellipse cx="24" cy="26" rx="6" ry="6.5" :fill="props.eyeColor">
             <!-- Fresh: 眨眼 -->
             <animate
               v-if="state === 'Fresh'"
@@ -196,7 +187,7 @@ const currentColors = computed(() => colors[props.state])
 
         <!-- 右眼 -->
         <g class="eye-group">
-          <ellipse cx="40" cy="26" rx="6" ry="6.5" :fill="currentColors.eye">
+          <ellipse cx="40" cy="26" rx="6" ry="6.5" :fill="props.eyeColor">
             <!-- Fresh: 眨眼（延迟） -->
             <animate
               v-if="state === 'Fresh'"
@@ -247,7 +238,7 @@ const currentColors = computed(() => colors[props.state])
         </g>
 
         <!-- 小嘴巴 -->
-        <path :stroke="currentColors.stroke" stroke-width="1.5" fill="none" stroke-linecap="round"
+        <path :stroke="props.strokeColor" stroke-width="1.5" fill="none" stroke-linecap="round"
           v-if="state === 'Fresh' || state === 'Flow'"
           d="M 29 34 Q 32 37 35 34"
         >
@@ -260,13 +251,13 @@ const currentColors = computed(() => colors[props.state])
         </path>
 
         <!-- Warning: 担心嘴型 -->
-        <path :stroke="currentColors.stroke" stroke-width="1.5" fill="none" stroke-linecap="round"
+        <path :stroke="props.strokeColor" stroke-width="1.5" fill="none" stroke-linecap="round"
           v-if="state === 'Warning'"
           d="M 29 35 Q 32 33 35 35"
         />
 
         <!-- Panic: 惊恐嘴型 -->
-        <ellipse :fill="currentColors.stroke"
+        <ellipse :fill="props.strokeColor"
           v-if="state === 'Panic'"
           cx="32"
           cy="36"
@@ -283,10 +274,10 @@ const currentColors = computed(() => colors[props.state])
 
         <!-- Dead: X_X 眼睛 -->
         <g v-if="state === 'Dead'">
-          <path :stroke="currentColors.stroke" stroke-width="2" stroke-linecap="round"
+          <path :stroke="props.strokeColor" stroke-width="2" stroke-linecap="round"
             d="M 20 23 L 28 31 M 28 23 L 20 31"
           />
-          <path :stroke="currentColors.stroke" stroke-width="2" stroke-linecap="round"
+          <path :stroke="props.strokeColor" stroke-width="2" stroke-linecap="round"
             d="M 36 23 L 44 31 M 44 23 L 36 31"
           />
         </g>
