@@ -87,10 +87,14 @@ onMounted(async () => {
   }).catch((err) => {
     console.error('Setup event listener failed:', err)
   })
+
+  // 暴露刷新函数到 window，供 Rust 端通过 eval 直接调用
+  (window as any).__infoPanelRefresh = refreshUsageData
 })
 
 onUnmounted(() => {
   cleanup?.()
+  delete (window as any).__infoPanelRefresh
 })
 </script>
 

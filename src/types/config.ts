@@ -1,4 +1,5 @@
 export type DisplayMode =
+  | 'none'             // 无 - 不显示用量 (None)
   | 'holo-bubble'      // 全息像素气泡 (Holo-Bubble)
   | 'cyber-ring'       // 赛博能量环 (Cyber-Ring)
   | 'aura-field'       // 灵能力场波纹 (Aura-Field)

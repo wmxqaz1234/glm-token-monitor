@@ -1,4 +1,4 @@
-use tauri::{WebviewWindow, Manager};
+use tauri::{WebviewWindow, Manager, Emitter};
 
 /// 打开信息面板窗口
 #[tauri::command]
@@ -88,6 +88,9 @@ pub async fn open_info_panel(
 
     // 显示窗口
     info_panel.show().map_err(|e| format!("Failed to show info panel: {}", e))?;
+
+    // 直接触发前端刷新（通过 eval 在 webview 中派发自定义事件）
+    let _ = info_panel.eval("window.__infoPanelRefresh && window.__infoPanelRefresh()");
 
     // 触发数据刷新（异步，不阻塞窗口显示）
     let app_handle_for_refresh = app_handle.clone();

@@ -29,6 +29,7 @@ const activeTab = ref<'basic' | 'models' | 'pet'>('basic')
 const isDragging = ref(false)
 
 const displayModes: { value: DisplayMode; label: string }[] = [
+  { value: 'none', label: '无' },
   { value: 'holo-bubble', label: '全息气泡' },
   { value: 'cyber-ring', label: '赛博光环' },
   { value: 'aura-field', label: '光环力场' },
