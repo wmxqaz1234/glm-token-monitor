@@ -2,8 +2,6 @@
 
 <div align="center">
 
-![GLM-Token-Monitor Logo](design/icons/方案1-环形进度.svg)
-
 **🔍 一个可爱的跨平台桌面 API 配额监控工具**
 
 [![GitHub stars](https://img.shields.io/github/stars/huangbh2020/glm-token-monitor?style=social)](https://github.com/huangbh2020/glm-token-monitor/stargazers)
@@ -17,227 +15,95 @@
 
 ---
 
-## ✨ 简介
+## 这是什么？
 
-**GLM-Token-Monitor** 是一个跨平台的桌面 API 配额监控应用，通过可爱的电子宠物和多种炫酷的显示模式，实时展示您的 API 使用情况。
+**GLM-Token-Monitor** 是一个桌面悬浮宠物应用，帮你实时监控 GLM API 的配额使用情况。
 
-### 🎯 核心特性
+如果你经常使用 GLM API（智谱 BigModel 或 Z.AI），可能会遇到这样的问题：
+- 忘记查看配额，突然就用完了
+- 不知道什么时候重置
+- 手动查网页太麻烦
 
-- **🐾 可爱宠物** - 多种电子宠物角色，根据使用量展示不同动画状态
-- **📊 实时监控** - 自动轮询 API 配额，支持多提供商（智谱、Z.AI 等）
-- **🎨 多种显示模式** - 全息气泡、赛博圆环、光场、能量核心等 6 种显示效果
-- **⚡ 轻量高效** - 基于 Tauri 2.0 + Vue 3，资源占用极低
-- **🪟 跨平台支持** - Windows、macOS、Linux
-- **🎨 高度可定制** - 支持自定义宠物、显示模式、光晕效果等
+这个小工具就是解决这些问题的 —— 它会以可爱电子宠物的形式，始终悬浮在你的桌面上，让你一眼就能看到当前的配额状态。
 
-## 📖 目录
+## 功能预览
 
-- [功能展示](#-功能展示)
-- [技术栈](#-技术栈)
-- [安装和使用](#-安装和使用)
-- [项目结构](#-项目结构)
-- [配置说明](#-配置说明)
-- [开发指南](#-开发指南)
-- [常见问题](#-常见问题)
-- [贡献指南](#-贡献指南)
+### 桌面宠物
 
----
+![桌面宠物](./images/pet.png)
 
-## 🎬 功能展示
+宠物会根据配额使用量自动变换状态：
 
-### 宠物状态系统
+| 状态 | 使用量 | 表现 |
+|:----:|:------:|:-----|
+| 🟢 Fresh | 0-30% | 悠闲呼吸，一切正常 |
+| 🔵 Flow | 31-60% | 努力工作，敲打动画 |
+| 🟡 Warning | 61-80% | 开始紧张，轻微抖动 |
+| 🟠 Panic | 81-95% | 非常焦虑，冒汗动画 |
+| ⚫ Dead | 96-100% | 配额耗尽，灵魂出窍 |
 
-应用根据 API 使用量自动切换宠物状态，每种状态都有独特的动画效果：
+### 信息气泡
 
-| 状态 | 使用量 | 颜色 | 动画效果 |
-|:----:|:------:|:----:|:--------|
-| 🟢 Fresh | 0-30% | 绿色 | 呼吸动画，悠闲自在 |
-| 🔵 Flow | 31-60% | 蓝色 | 敲打动画，努力工作中 |
-| 🟡 Warning | 61-80% | 黄色 | 抖动动画，需要注意用量 |
-| 🟠 Panic | 81-95% | 橙色 | 冒汗动画，快要用完了 |
-| ⚫ Dead | 96-100% | 灰色 | 灵魂出窍，配额耗尽 |
+点击宠物查看详细用量：
 
-### 显示模式
+![信息气泡](./images/info.png)
 
-提供 6 种炫酷的 Token 剩余量显示模式：
+- **5h Token 额度** - 5 小时窗口内的 Token 使用量
+- **MCP 额度** - 月度调用次数限制
+- 自动倒计时下次刷新时间
 
-- **None** - 极简模式，不显示数值
-- **Holo Bubble** - 全息气泡，科幻感十足
-- **Cyber Ring** - 赛博圆环，经典进度环设计
-- **Aura Field** - 光场扩散，视觉效果柔和
-- **Energy Core** - 能量核心，像素风格网格
-- **Status Floater** - 状态浮动条，侧边显示
+### 设置界面
 
-### 双指标监控
+![宠物设置](./images/petsetting.png)
 
-- **🗓 月度 MCP 额度** - 监控每月 API 调用次数限制
-- **⏱ 5h Token 额度** - 监控 5 小时窗口内的 Token 使用量（驱动宠物状态）
+![API设置](./images/modelSetting.png)
 
-## 🛠 技术栈
+支持自定义：
+- 多种宠物角色（果冻精灵、像素幽灵、狗狗、猫咪等）
+- 6 种 Token 显示模式
+- 深色/浅色主题
+- 开机自启动
 
-### 前端
-- **Vue 3.4** - 渐进式 JavaScript 框架
-- **TypeScript 5.3** - 类型安全
-- **TailwindCSS 3.4** - 实用优先的 CSS 框架
-- **Vite 5.0** - 快速的前端构建工具
+## 快速开始
 
-### 后端
-- **Rust** - 系统级性能
-- **Tauri 2.0** - 跨平台桌面应用框架
-- **Tokio** - 异步运行时
-- **reqwest** - HTTP 客户端
+### 安装
 
-### 主要依赖
-- `tauri-plugin-shell` - 系统 shell 操作
-- `serde/serde_json` - 序列化/反序列化
-- `chrono` - 时间处理
-- `dirs` - 系统目录获取
+**Windows 用户**：
+1. 下载 `.exe` 安装包
+2. 双击安装
+3. 启动后右键托盘图标，选择"设置"
 
-## 📦 安装和使用
-
-### 前置要求
-
-- **Node.js** 18+
-- **Rust** 1.70+
-- **npm** 或 **yarn**
-
-### 从源码构建
-
-```bash
-# 1. 克隆仓库
-git clone https://github.com/huangbh2020/glm-token-monitor.git
-cd glm-token-monitor
-
-# 2. 安装依赖
-npm install
-
-# 3. 启动开发模式（热重载）
-npm run tauri:dev
-
-# 4. 构建生产版本
-
-## 快速打包（推荐）
-
-**Windows 用户**:
-```bash
-# 双击运行打包脚本
-scripts\build.bat
-```
-
-**Linux/macOS 用户**:
-```bash
-# 运行打包脚本
-chmod +x scripts/build.sh
-./scripts/build.sh
-```
-
-## 手动打包
-
-```bash
-# 完整打包（包含前端和 Rust）
-npm run tauri build
-
-# 或仅打包 Rust 部分（前端已构建）
-cd src-tauri
-cargo build --release
-```
-
-**📖 详细打包指南**: 查看 [docs/打包指南.md](docs/打包指南.md)
-
-```
-
-构建完成后，安装包位于 `src-tauri/target/release/bundle/` 目录。
+**macOS 用户**：
+1. 下载 `.dmg` 文件
+2. 拖拽到 Applications
+3. 在系统托盘找到应用图标
 
 ### 配置 API
 
-首次运行后，需要配置您的 API 信息：
+首次使用需要配置 API Key：
 
-1. 右键点击系统托盘图标，选择"设置"
-2. 填写 API Key
+1. 右键系统托盘图标，选择"设置"
+2. 填写你的 API Key
 3. 选择提供商（智谱 BigModel 或 Z.AI）
-4. 点击"测试连接"验证配置
+4. 点击"测试连接"验证
 5. 保存设置
 
-### Windows 用户
+配置完成后，宠物会自动开始监控配额。
 
-- 下载 `.exe` 安装包，双击安装
-- 应用会自动启动并显示在桌面
-- 点击宠物窗口查看详细信息
-- 拖动窗口可移动位置
+## 使用方式
 
-### macOS 用户
+- **拖动** - 按住宠物拖动到任意位置
+- **点击** - 查看详细用量信息
+- **右键托盘** - 打开设置或退出应用
 
-- 下载 `.dmg` 文件，拖拽到 Applications
-- 在系统托盘中找到应用图标
-- 点击托盘图标查看用量信息
+## 支持的提供商
 
-## 📁 项目结构
+- **智谱 BigModel** (open.bigmodel.cn)
+- **Z.AI** (api.z.ai)
 
-```
-glm-token-monitor/
-├── src/                          # Vue 前端代码
-│   ├── components/               # Vue 组件
-│   │   ├── PetWidget.vue        # Windows 桌面宠物组件
-│   │   ├── PopoverPanel.vue     # macOS 气泡面板组件
-│   │   └── pets/                # 宠物组件目录
-│   │       ├── JellySpirit.vue  # 果冻精灵
-│   │       ├── PixelGhost.vue   # 像素幽灵
-│   │       ├── DogSit.vue       # 狗狗-坐
-│   │       └── ...
-│   ├── composables/             # Vue 组合式函数
-│   │   ├── useUsageState.ts    # 使用量状态管理
-│   │   ├── useTauriEvents.ts   # Tauri 事件监听
-│   │   ├── usePlatform.ts       # 平台检测
-│   │   ├── useSettings.ts       # 配置管理
-│   │   ├── useDisplayMode.ts    # 显示模式管理
-│   │   └── usePetAction.ts      # 宠物动作管理
-│   ├── App.vue                  # 主应用组件
-│   ├── main.ts                  # 应用入口
-│   └── style.css                # 全局样式
-├── src-tauri/                   # Rust 后端代码
-│   ├── src/
-│   │   ├── main.rs              # 应用入口
-│   │   ├── events.rs            # 事件定义和数据结构
-│   │   ├── polling.rs           # 轮询逻辑
-│   │   ├── commands.rs          # Tauri 命令
-│   │   ├── config.rs            # 配置管理
-│   │   ├── settings_commands.rs # 设置相关命令
-│   │   ├── windows.rs           # 窗口管理
-│   │   └── tray.rs              # 系统托盘支持
-│   ├── Cargo.toml               # Rust 依赖配置
-│   └── tauri.conf.json          # Tauri 配置
-├── design/                      # 设计资源
-│   └── icons/                   # 图标设计方案
-├── CLAUDE.md                    # Claude Code 开发指南
-├── README.md                    # 项目说明
-└── package.json                 # Node.js 依赖配置
-```
+更多提供商支持中...
 
-## ⚙️ 配置说明
-
-### 轮询间隔
-
-默认每 **1 分钟**自动刷新 API 使用量，可在设置中调整。
-
-### 配置文件位置
-
-- **Windows**: `%APPDATA%\glm-token-monitor\config.json`
-- **macOS**: `~/Library/Application Support/glm-token-monitor/config.json`
-- **Linux**: `~/.config/glm-token-monitor/config.json`
-
-### 可配置项
-
-- **API Key**: 您的 API 访问密钥
-- **提供商**: 智谱 BigModel / Z.AI
-- **轮询间隔**: 1-60 分钟
-- **显示模式**: 6 种显示效果
-- **宠物类型**: 多种可爱宠物
-- **光晕效果**: 开启/关闭状态光晕
-- **开机自启**: 系统启动时自动运行
-
-## 🚀 开发指南
-
-### 环境配置
+## 从源码构建
 
 ```bash
 # 克隆仓库
@@ -247,163 +113,54 @@ cd glm-token-monitor
 # 安装依赖
 npm install
 
-# 启动开发模式
+# 开发模式
 npm run tauri:dev
+
+# 构建
+npm run tauri:build
 ```
 
-### 添加新的 API 提供商
+详细打包指南：[docs/打包指南.md](docs/打包指南.md)
 
-1. 编辑 `src-tauri/src/config.rs`：
+## 技术栈
 
-```rust
-pub fn api_domain(&self) -> &'static str {
-    match self.provider.as_str() {
-        "bigmodel" => "https://open.bigmodel.cn/",
-        "zai" => "https://api.z.ai/",
-        "your-provider" => "https://your-api.com/", // 新增
-        _ => "https://open.bigmodel.cn/",
-    }
-}
-```
+- **前端**：Vue 3 + TypeScript + TailwindCSS
+- **后端**：Rust + Tauri 2.0
+- **跨平台**：Windows、macOS、Linux
 
-2. 更新 API 响应解析逻辑（如果需要）
-
-### 添加新的宠物类型
-
-1. 在 `src/components/pets/` 创建新的宠物组件
-2. 在 `src/components/PetWidget.vue` 中注册组件
-3. 在 `src/composables/usePetAction.ts` 添加动作逻辑
-4. 更新配置默认值
-
-### 添加新的显示模式
-
-1. 在 `src/components/PetWidget.vue` 添加新的显示分支
-2. 在 `<style scoped>` 添加对应样式
-3. 在 `src/composables/useDisplayMode.ts` 更新模式列表
-
-### 代码规范
-
-- **Rust**: 遵循 `rustfmt` 格式化
-- **TypeScript/Vue**: 遵循 ESLint 配置
-- **Commit**: 使用 [Conventional Commits](https://www.conventionalcommits.org/) 规范
-
-```
-feat: 新功能
-fix: 修复 bug
-docs: 文档更新
-style: 代码格式调整
-refactor: 重构
-test: 测试相关
-chore: 构建/工具链更新
-```
-
-## 🧪 测试
-
-### Rust 端测试
-
-```bash
-cd src-tauri
-cargo test
-```
-
-### 前端构建测试
-
-```bash
-npm run build
-```
-
-## ❓ 常见问题
+## 常见问题
 
 ### 编译错误
 
-**问题**: 构建失败，提示依赖错误
-
-**解决方案**:
 ```bash
 # 更新 Rust 工具链
 rustup update
 
-# 清理并重新安装依赖
+# 清理缓存重新安装
 rm -rf node_modules
 npm install
-
-# 清理 Rust 构建缓存
-cd src-tauri
-cargo clean
-```
-
-### Tauri 开发服务器无法启动
-
-**问题**: 端口被占用或启动失败
-
-**解决方案**:
-```bash
-# 检查端口 1420 是否被占用
-# Windows: netstat -ano | findstr :1420
-# macOS/Linux: lsof -i :1420
-
-# 清理缓存
-npm run clean
-
-# 重新启动
-npm run tauri:dev
+cd src-tauri && cargo clean
 ```
 
 ### API 连接失败
 
-**问题**: 无法获取 API 使用量
-
-**解决方案**:
 1. 检查 API Key 是否正确
 2. 检查网络连接
-3. 在设置中点击"测试连接"验证配置
-4. 查看日志文件获取详细错误信息
+3. 在设置中点击"测试连接"验证
 
-## 🤝 贡献指南
+## 贡献
 
-我们欢迎所有形式的贡献！
+欢迎提交 Issue 和 Pull Request！
 
-### 如何贡献
+## 许可证
 
-1. **Fork** 本仓库
-2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交您的更改 (`git commit -m 'feat: add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启一个 **Pull Request**
-
-### 报告问题
-
-- 使用 [GitHub Issues](https://github.com/huangbh2020/glm-token-monitor/issues) 报告 Bug
-- 提供详细的复现步骤和环境信息
-- 如果可能，附上截图或日志
-
-### 功能建议
-
-- 在 Issues 中使用 `Feature Request` 标签
-- 详细描述您的使用场景和期望功能
-- 说明为什么这个功能对项目有价值
-
-## 📄 许可证
-
-本项目采用 [MIT](LICENSE) 许可证 - 查看 LICENSE 文件了解详情
-
-## 🌟 致谢
-
-- [Tauri](https://tauri.app/) - 跨平台桌面应用框架
-- [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
-- [TailwindCSS](https://tailwindcss.com/) - 实用优先的 CSS 框架
-- 所有贡献者的付出
-
-## 📮 联系方式
-
-- **GitHub**: [huangbh2020/glm-token-monitor](https://github.com/huangbh2020/glm-token-monitor)
-- **Issues**: [提交问题](https://github.com/huangbh2020/glm-token-monitor/issues)
+[MIT](LICENSE)
 
 ---
 
 <div align="center">
 
-**如果这个项目对你有帮助，请给个 ⭐️ Star 支持一下！**
+**如果觉得有用，请给个 ⭐️ Star**
 
 Made with ❤️ by [huangbh2020](https://github.com/huangbh2020)
 
