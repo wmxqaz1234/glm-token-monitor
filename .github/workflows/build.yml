@@ -40,8 +40,6 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-ms
 
       - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
