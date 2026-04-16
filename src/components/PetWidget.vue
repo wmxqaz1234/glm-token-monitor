@@ -74,6 +74,31 @@ const tokensResetTime = computed(() => formatResetTime(usageData.value.tokens_re
 const weeklyTokensResetTime = computed(() => formatResetTime(usageData.value.weekly_tokens_reset_time))
 const timeResetTime = computed(() => formatResetTime(usageData.value.time_reset_time))
 
+// Token 刷新倒计时（秒）
+const tokensResetCountdown = computed(() => {
+  if (!usageData.value.tokens_reset_time) return 0
+  const now = Date.now()
+  const remaining = usageData.value.tokens_reset_time - now
+  return Math.max(0, Math.floor(remaining / 1000))
+})
+
+// 格式化倒计时显示（1h23m 格式）
+const formatCountdown = (seconds: number): string => {
+  if (seconds <= 0) return '即将刷新'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `${hours}h${minutes}m`
+  }
+  if (minutes > 0) {
+    return `${minutes}m`
+  }
+  return `${seconds}s`
+}
+
+const tokensCountdownDisplay = computed(() => formatCountdown(tokensResetCountdown.value))
+
 // 刷新状态
 const isRefreshing = ref(false)
 const lastUpdateTime = ref<string>('')
@@ -169,10 +194,12 @@ async function openSettings() {
 
 // 根据百分比获取状态颜色
 function getStatusColor(percent: number): string {
-  if (percent >= 96) return '#6B7280'
-  if (percent >= 81) return '#F97316'
-  if (percent >= 61) return '#F59E0B'
-  return '#3B82F6'
+  if (percent >= 95) return '#6B7280'
+  if (percent >= 81) return '#EF4444'
+  if (percent >= 65) return '#F97316'
+  if (percent >= 50) return '#F59E0B'
+  if (percent >= 25) return '#1890FF'
+  return '#10B981'
 }
 
 // 双击处理 - 阻止全屏
@@ -218,11 +245,11 @@ watch([hasApiKey, showInfoPanel, displayMode], async ([hasKey, showPanel, mode])
       // 显示信息面板（宠物隐藏，面板居中）
       await invoke('resize_main_window', { width: 160, height: 240 })
     } else if (mode && mode !== 'none') {
-      // 有 token 显示模式，需要更大空间
-      await invoke('resize_main_window', { width: 120, height: 120 })
+      // 有 token 显示模式 + 倒计时，需要更大空间
+      await invoke('resize_main_window', { width: 120, height: 130 })
     } else {
-      // 正常状态
-      await invoke('resize_main_window', { width: 120, height: 120 })
+      // 正常状态 + 倒计时
+      await invoke('resize_main_window', { width: 120, height: 130 })
     }
   } catch (err) {
     console.error('Failed to resize window:', err)
@@ -332,6 +359,11 @@ onUnmounted(() => {
         </div>
         <div class="sf-text">{{ 100 - tokensPercent }}%</div>
       </div>
+    </div>
+
+    <!-- Token 刷新倒计时（在宠物正下方） -->
+    <div class="refresh-countdown" :class="{ visible: hasApiKey }">
+      <span>{{ tokensCountdownDisplay }}</span>
     </div>
 
     <!-- API 配置提示气泡（未配置时显示） -->
@@ -505,6 +537,11 @@ onUnmounted(() => {
   box-shadow: 0 0 15px rgba(239,68,68,0.34), 0 0 23px rgba(249,115,22,0.09);
   animation: glow-panic 0.5s ease-in-out infinite;
 }
+.pet-exhausted .glow-backdrop {
+  background: radial-gradient(circle, rgba(239,68,68,0.2) 0%, transparent 68%);
+  box-shadow: 0 0 20px rgba(239,68,68,0.5), 0 0 30px rgba(220,38,38,0.3);
+  animation: glow-exhausted 0.8s ease-in-out infinite;
+}
 .pet-dead .glow-backdrop {
   background: radial-gradient(circle, rgba(107,114,128,0.11) 0%, transparent 68%);
   box-shadow: 0 0 9px rgba(107,114,128,0.15);
@@ -526,6 +563,10 @@ onUnmounted(() => {
 @keyframes glow-panic {
   0%,100% { opacity: 0.7; box-shadow: 0 0 20px rgba(239,68,68,0.55); }
   50% { opacity: 1; box-shadow: 0 0 40px rgba(239,68,68,1), 0 0 60px rgba(249,115,22,0.4); }
+}
+@keyframes glow-exhausted {
+  0%,100% { opacity: 0.75; box-shadow: 0 0 20px rgba(239,68,68,0.5); }
+  50% { opacity: 1; box-shadow: 0 0 35px rgba(239,68,68,0.8), 0 0 50px rgba(220,38,38,0.4); }
 }
 @keyframes glow-dead {
   0%,100% { opacity: 0.8; }
@@ -760,12 +801,12 @@ onUnmounted(() => {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 11px;
   font-weight: 600;
-  color: #60a5fa;
+  color: #40a9ff;
 }
 
 .api-config-bubble .bubble-arrow {
   font-size: 12px;
-  color: #60a5fa;
+  color: #40a9ff;
   transition: transform 0.2s ease;
 }
 
@@ -830,10 +871,11 @@ onUnmounted(() => {
   position: relative; z-index: 2;
 }
 .holo-bubble.state-fresh .holo-val { color: #34D399; }
-.holo-bubble.state-flow .holo-val { color: #60A5FA; }
+.holo-bubble.state-flow .holo-val { color: #40A9FF; }
 .holo-bubble.state-warning .holo-val { color: #FBBF24; }
-.holo-bubble.state-panic .holo-val { color: #F87171; animation: glitch 0.3s infinite; }
+.holo-bubble.state-panic .holo-val { color: #F97316; animation: glitch 0.3s infinite; }
 .holo-bubble.state-dead .holo-val { color: #9CA3AF; }
+.holo-bubble.state-exhausted .holo-val { color: #EF4444; }
 
 @keyframes holo-float { 
   from { transform: translateY(0); box-shadow: 0 0 5px rgba(96,165,250,0.2); }
@@ -856,10 +898,11 @@ onUnmounted(() => {
   transition: stroke-dashoffset 0.5s ease, stroke 0.5s ease;
 }
 .state-fresh .cr-progress { stroke: #34D399; filter: drop-shadow(0 0 4px #34D399); }
-.state-flow .cr-progress { stroke: #60A5FA; filter: drop-shadow(0 0 4px #60A5FA); }
+.state-flow .cr-progress { stroke: #40A9FF; filter: drop-shadow(0 0 4px #40A9FF); }
 .state-warning .cr-progress { stroke: #FBBF24; filter: drop-shadow(0 0 4px #FBBF24); }
-.state-panic .cr-progress { stroke: #F87171; filter: drop-shadow(0 0 6px #F87171); animation: cr-alarm 1s ease infinite alternate; }
+.state-panic .cr-progress { stroke: #F97316; filter: drop-shadow(0 0 6px #F97316); animation: cr-alarm 1s ease infinite alternate; }
 .state-dead .cr-progress { stroke: #9CA3AF; }
+.state-exhausted .cr-progress { stroke: #EF4444; filter: drop-shadow(0 0 6px #EF4444); animation: cr-alarm 0.8s ease infinite alternate; }
 
 .cr-center-val {
   position: absolute; bottom: -8px; right: -12px; font-family: 'Press Start 2P', monospace; font-size: 10px; font-weight: bold;
@@ -867,10 +910,11 @@ onUnmounted(() => {
   z-index: 25;
 }
 .state-fresh .cr-center-val { color: #34D399; }
-.state-flow .cr-center-val { color: #60A5FA; }
+.state-flow .cr-center-val { color: #40A9FF; }
 .state-warning .cr-center-val { color: #FBBF24; }
-.state-panic .cr-center-val { color: #F87171; }
+.state-panic .cr-center-val { color: #F97316; }
 .state-dead .cr-center-val { color: #9CA3AF; }
+.state-exhausted .cr-center-val { color: #EF4444; }
 
 @keyframes cr-spin { to { transform: rotate(360deg); } }
 @keyframes cr-alarm { from { opacity: 0.6; } to { opacity: 1; stroke-width: 4; } }
@@ -888,10 +932,11 @@ onUnmounted(() => {
 .aura-field .r2 { animation-delay: 1s; }
 .aura-field .r3 { animation-delay: 2s; }
 .state-fresh .aura-ripple { border-color: #34D399; }
-.state-flow .aura-ripple { border-color: #60A5FA; }
+.state-flow .aura-ripple { border-color: #40A9FF; }
 .state-warning .aura-ripple { border-color: #FBBF24; animation-duration: 1.5s; }
-.state-panic .aura-ripple { border-color: #F87171; animation-duration: 0.8s; border-width: 2px; }
+.state-panic .aura-ripple { border-color: #F97316; animation-duration: 0.8s; border-width: 2px; }
 .state-dead .aura-ripple { border-color: #6B7280; animation: none; opacity: 0.2; width: 40px; height: 40px; }
+.state-exhausted .aura-ripple { border-color: #EF4444; animation-duration: 0.6s; border-width: 2px; }
 
 .aura-val {
   position: absolute; bottom: -8px; right: -12px; font-family: 'Press Start 2P', monospace; font-size: 10px;
@@ -899,10 +944,11 @@ onUnmounted(() => {
   z-index: 25;
 }
 .state-fresh .aura-val { color: #34D399; border-color: #34D399; }
-.state-flow .aura-val { color: #60A5FA; border-color: #60A5FA; }
+.state-flow .aura-val { color: #40A9FF; border-color: #40A9FF; }
 .state-warning .aura-val { color: #FBBF24; border-color: #FBBF24; }
-.state-panic .aura-val { color: #F87171; border-color: #F87171; }
+.state-panic .aura-val { color: #F97316; border-color: #F97316; }
 .state-dead .aura-val { color: #9CA3AF; border-color: #9CA3AF; }
+.state-exhausted .aura-val { color: #EF4444; border-color: #EF4444; }
 
 @keyframes aura-pulse {
   0% { width: 40px; height: 40px; opacity: 0.8; }
@@ -921,20 +967,22 @@ onUnmounted(() => {
   width: 4px; height: 4px; background: #1E293B; transition: all 0.3s;
 }
 .state-fresh .ec-pixel.on { background: #34D399; box-shadow: 0 0 3px #34D399; }
-.state-flow .ec-pixel.on { background: #60A5FA; box-shadow: 0 0 3px #60A5FA; }
+.state-flow .ec-pixel.on { background: #40A9FF; box-shadow: 0 0 3px #40A9FF; }
 .state-warning .ec-pixel.on { background: #FBBF24; box-shadow: 0 0 3px #FBBF24; }
-.state-panic .ec-pixel.on { background: #F87171; box-shadow: 0 0 4px #F87171; animation: ec-flash 0.5s infinite alternate; }
+.state-panic .ec-pixel.on { background: #F97316; box-shadow: 0 0 4px #F97316; animation: ec-flash 0.5s infinite alternate; }
 .state-dead .ec-pixel.on { background: #6B7280; box-shadow: none; }
+.state-exhausted .ec-pixel.on { background: #EF4444; box-shadow: 0 0 5px #EF4444; animation: ec-flash 0.4s infinite alternate; }
 
 .ec-val {
   position: absolute; top: -16px; right: 0px; font-family: 'Press Start 2P', monospace; font-size: 10px;
   background: rgba(15,23,42,0.9); padding: 1px 3px; border-radius: 2px; border: 1px solid #1E293B;
 }
 .state-fresh .ec-val { color: #34D399; }
-.state-flow .ec-val { color: #60A5FA; }
+.state-flow .ec-val { color: #40A9FF; }
 .state-warning .ec-val { color: #FBBF24; }
-.state-panic .ec-val { color: #F87171; }
+.state-panic .ec-val { color: #F97316; }
 .state-dead .ec-val { color: #9CA3AF; }
+.state-exhausted .ec-val { color: #EF4444; }
 
 @keyframes ec-flash { from { opacity: 0.5; } to { opacity: 1; } }
 
@@ -952,10 +1000,11 @@ onUnmounted(() => {
   transition: height 0.5s ease, background 0.5s ease;
 }
 .state-fresh .sf-bar-fill { background: linear-gradient(to top, #34D399, #6EE7B7); }
-.state-flow .sf-bar-fill { background: linear-gradient(to top, #3B82F6, #60A5FA); }
+.state-flow .sf-bar-fill { background: linear-gradient(to top, #1890FF, #40A9FF); }
 .state-warning .sf-bar-fill { background: linear-gradient(to top, #F59E0B, #FBBF24); }
-.state-panic .sf-bar-fill { background: linear-gradient(to top, #EF4444, #F87171); animation: sf-flash 0.8s infinite alternate; }
-.state-dead .sf-bar-fill { background: linear-gradient(to top, #4B5563, #6B7280); }
+.state-panic .sf-bar-fill { background: linear-gradient(to top, #EA580C, #F97316); animation: sf-flash 0.8s infinite alternate; }
+.state-dead .sf-bar-fill { background: linear-gradient(to top, #4B5563, #6B7280); animation: sf-flash 0.8s infinite alternate; }
+.state-exhausted .sf-bar-fill { background: linear-gradient(to top, #DC2626, #EF4444); animation: sf-flash 0.6s infinite alternate; }
 
 .sf-text {
   font-family: 'Press Start 2P', monospace; font-size: 10px; margin-top: 2px;
@@ -963,10 +1012,11 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 .state-fresh .sf-text { color: #34D399; }
-.state-flow .sf-text { color: #60A5FA; }
+.state-flow .sf-text { color: #40A9FF; }
 .state-warning .sf-text { color: #FBBF24; }
-.state-panic .sf-text { color: #F87171; }
+.state-panic .sf-text { color: #F97316; }
 .state-dead .sf-text { color: #9CA3AF; }
+.state-exhausted .sf-text { color: #EF4444; }
 
 @keyframes sf-flash { from { opacity: 0.7; } to { opacity: 1; } }
 
@@ -1185,4 +1235,40 @@ onUnmounted(() => {
   opacity: 0;
   transform: translateX(-50%) scale(0.9);
 }
+
+	/* ── Token 刷新倒计时（宠物正下方）── */
+	.refresh-countdown {
+	  position: absolute;
+	  bottom: -24px;
+	  left: 50%;
+	  transform: translateX(-50%);
+	  white-space: nowrap;
+	  opacity: 0;
+	  transition: opacity 0.25s ease;
+	  pointer-events: none;
+	}
+
+	.refresh-countdown.visible {
+	  opacity: 0.8;
+	}
+
+	.refresh-countdown span {
+	  font-family: ui-monospace, SFMono-Regular, monospace;
+	  font-size: 10px;
+	  font-weight: 600;
+	  color: #94a3b8;
+	  background: rgba(15, 23, 42, 0.85);
+	  padding: 2px 6px;
+	  border-radius: 4px;
+	  border: 1px solid rgba(148, 163, 184, 0.2);
+	}
+
+	/* 根据状态改变颜色 */
+	.pet-fresh .refresh-countdown span { color: #34d399; border-color: rgba(52, 211, 153, 0.3); }
+	.pet-flow .refresh-countdown span { color: #40a9ff; border-color: rgba(96, 165, 250, 0.3); }
+	.pet-warning .refresh-countdown span { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); }
+	.pet-panic .refresh-countdown span { color: #f97316; border-color: rgba(249, 115, 22, 0.3); }
+	.pet-dead .refresh-countdown span { color: #9ca3af; border-color: rgba(239, 68, 68, 0.3); }
+		.pet-exhausted .refresh-countdown span { color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
+
 </style>

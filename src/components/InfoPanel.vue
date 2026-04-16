@@ -16,10 +16,12 @@ const weeklyTokensPercent = computed(() => usageData.value.weekly_tokens_percent
 
 // 根据百分比获取状态颜色
 function getStatusColor(percent: number): string {
-  if (percent >= 96) return '#6B7280'
-  if (percent >= 81) return '#F97316'
-  if (percent >= 61) return '#F59E0B'
-  return '#3B82F6'
+  if (percent >= 95) return '#6B7280'
+  if (percent >= 81) return '#EF4444'
+  if (percent >= 65) return '#F97316'
+  if (percent >= 50) return '#F59E0B'
+  if (percent >= 25) return '#1890FF'
+  return '#10B981'
 }
 
 // 格式化重置时间（简化版）
@@ -247,7 +249,7 @@ onUnmounted(() => {
 .notice-title {
   font-size: 14px;
   font-weight: 600;
-  color: #60a5fa;
+  color: #40a9ff;
 }
 
 .info-panel[data-theme="light"] .notice-title {
@@ -265,7 +267,7 @@ onUnmounted(() => {
   background: rgba(59, 130, 246, 0.15);
   border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 20px;
-  color: #60a5fa;
+  color: #40a9ff;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;

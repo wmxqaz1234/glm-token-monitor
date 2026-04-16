@@ -1,6 +1,6 @@
 import { computed, type Ref } from 'vue'
 
-export type PetState = 'Fresh' | 'Flow' | 'Warning' | 'Panic' | 'Dead'
+export type PetState = 'Fresh' | 'Flow' | 'Warning' | 'Panic' | 'Exhausted' | 'Dead'
 
 export interface UsageData {
   used: number
@@ -23,9 +23,10 @@ export interface UsageDetail {
 
 export const COLORS: Record<PetState, string> = {
   Fresh: '#10B981',
-  Flow: '#3B82F6',
+  Flow: '#1890FF',
   Warning: '#F59E0B',
   Panic: '#F97316',
+  Exhausted: '#EF4444',
   Dead: '#6B7280'
 }
 
@@ -37,10 +38,11 @@ export function useUsageState(used: Ref<number>, total: Ref<number>) {
 
   const petState = computed<PetState>(() => {
     const p = usagePercent.value
-    if (p <= 30) return 'Fresh'
-    if (p <= 60) return 'Flow'
-    if (p <= 80) return 'Warning'
-    if (p <= 95) return 'Panic'
+    if (p <= 24) return 'Fresh'
+    if (p <= 49) return 'Flow'
+    if (p <= 64) return 'Warning'
+    if (p <= 80) return 'Panic'
+    if (p <= 94) return 'Exhausted'
     return 'Dead'
   })
 
