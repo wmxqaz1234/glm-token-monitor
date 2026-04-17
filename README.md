@@ -4,9 +4,9 @@
 
 **🔍 一个可爱的跨平台桌面 API 配额监控工具**
 
-[![GitHub stars](https://img.shields.io/github/stars/huangbh2020/glm-token-monitor?style=social)](https://github.com/huangbh2020/glm-token-monitor/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/huangbh2020/glm-token-monitor?style=social)](https://github.com/huangbh2020/glm-token-monitor/network/members)
-[![GitHub issues](https://img.shields.io/github/issues/huangbh2020/glm-token-monitor)](https://github.com/huangbh2020/glm-token-monitor/issues)
+[![GitHub stars](https://img.shields.io/github/stars/wmxqaz1234/glm-token-monitor?style=social)](https://github.com/wmxqaz1234/glm-token-monitor/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/wmxqaz1234/glm-token-monitor?style=social)](https://github.com/wmxqaz1234/glm-token-monitor/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/wmxqaz1234/glm-token-monitor)](https://github.com/wmxqaz1234/glm-token-monitor/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [English](./README_EN.md) | 简体中文
@@ -107,7 +107,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/huangbh2020/glm-token-monitor.git
+git clone https://github.com/wmxqaz1234/glm-token-monitor.git
 cd glm-token-monitor
 
 # 安装依赖
@@ -162,6 +162,6 @@ cd src-tauri && cargo clean
 
 **如果觉得有用，请给个 ⭐️ Star**
 
-Made with ❤️ by [huangbh2020](https://github.com/huangbh2020)
+Made with ❤️ by [wmxqaz1234](https://github.com/wmxqaz1234)
 
 </div>

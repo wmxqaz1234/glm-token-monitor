@@ -4,9 +4,9 @@
 
 **🔍 A Cute Cross-Platform Desktop API Quota Monitoring Tool**
 
-[![GitHub stars](https://img.shields.io/github/stars/huangbh2020/glm-token-monitor?style=social)](https://github.com/huangbh2020/glm-token-monitor/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/huangbh2020/glm-token-monitor?style=social)](https://github.com/huangbh2020/glm-token-monitor/network/members)
-[![GitHub issues](https://img.shields.io/github/issues/huangbh2020/glm-token-monitor)](https://github.com/huangbh2020/glm-token-monitor/issues)
+[![GitHub stars](https://img.shields.io/github/stars/wmxqaz1234/glm-token-monitor?style=social)](https://github.com/wmxqaz1234/glm-token-monitor/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/wmxqaz1234/glm-token-monitor?style=social)](https://github.com/wmxqaz1234/glm-token-monitor/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/wmxqaz1234/glm-token-monitor)](https://github.com/wmxqaz1234/glm-token-monitor/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 English | [简体中文](./README.md)
@@ -90,7 +90,7 @@ The app automatically switches pet states based on API usage, each with unique a
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/huangbh2020/glm-token-monitor.git
+git clone https://github.com/wmxqaz1234/glm-token-monitor.git
 cd glm-token-monitor
 
 # 2. Install dependencies
@@ -184,7 +184,7 @@ Default refresh interval is **1 minute**, adjustable in settings.
 
 ```bash
 # Clone repository
-git clone https://github.com/huangbh2020/glm-token-monitor.git
+git clone https://github.com/wmxqaz1234/glm-token-monitor.git
 cd glm-token-monitor
 
 # Install dependencies
@@ -298,7 +298,7 @@ We welcome all forms of contributions!
 
 ### Report Issues
 
-- Use [GitHub Issues](https://github.com/huangbh2020/glm-token-monitor/issues) to report bugs
+- Use [GitHub Issues](https://github.com/wmxqaz1234/glm-token-monitor/issues) to report bugs
 - Provide detailed reproduction steps and environment info
 - Attach screenshots or logs if possible
 
@@ -315,8 +315,8 @@ This project is licensed under the [MIT](LICENSE) License - see the LICENSE file
 
 ## 📮 Contact
 
-- **GitHub**: [huangbh2020/glm-token-monitor](https://github.com/huangbh2020/glm-token-monitor)
-- **Issues**: [Submit Issue](https://github.com/huangbh2020/glm-token-monitor/issues)
+- **GitHub**: [wmxqaz1234/glm-token-monitor](https://github.com/wmxqaz1234/glm-token-monitor)
+- **Issues**: [Submit Issue](https://github.com/wmxqaz1234/glm-token-monitor/issues)
 
 ---
 
@@ -324,6 +324,6 @@ This project is licensed under the [MIT](LICENSE) License - see the LICENSE file
 
 **If this project helps you, please give it a ⭐️ Star!**
 
-Made with ❤️ by [huangbh2020](https://github.com/huangbh2020)
+Made with ❤️ by [wmxqaz1234](https://github.com/wmxqaz1234)
 
 </div>
