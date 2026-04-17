@@ -14,6 +14,7 @@ import DogWalk from './pets/DogWalk.vue'
 import DogBeg from './pets/DogBeg.vue'
 import JellySpirit from './pets/JellySpirit.vue'
 import PixelGhost from './pets/PixelGhost.vue'
+import Capybara from './pets/Capybara.vue'
 
 const { displayMode } = useDisplayMode()
 const { loadConfig, setupConfigListener, config, basicConfig, hasApiKey, thresholdConfig } = useSettings()
@@ -482,6 +483,7 @@ onUnmounted(() => {
     <div class="pet-container" :class="{ hidden: showInfoPanel && hasApiKey }">
       <JellySpirit v-if="petType === 'spirit'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :width="80" :height="80" :accessories="petAccessories" />
       <PixelGhost v-else-if="petType === 'ghost'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :width="80" :height="80" :accessories="petAccessories" />
+      <Capybara v-else-if="petType === 'capybara'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :action="currentAction" :width="80" :height="80" :accessories="petAccessories" />
       <CatGifViewer v-else-if="currentAction.startsWith('cat-')" :action="currentAction" :width="80" :height="80" />
       <component v-else :is="petComponents[currentAction as keyof typeof petComponents]" :key="currentAction" />
 

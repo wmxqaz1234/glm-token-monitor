@@ -27,7 +27,15 @@ export interface PollingConfig {
 }
 
 // 宠物类型
-export type PetType = 'spirit' | 'ghost'
+export type PetType = 'spirit' | 'ghost' | 'capybara'
+
+// 卡皮巴拉动作 - 永远淡定
+export type CapybaraAction =
+  | 'capybara-idle'      // 静坐冥想（永远不动）
+  | 'capybara-orange'    // 头顶橘子（经典造型）
+  | 'capybara-spa'       // 泡温泉（超放松）
+  | 'capybara-munch'     // 嚼草（淡定地吃）
+  | 'capybara-stare'     // 看着镜头（呆萌眼神）
 
 // 猫咪动作（已废弃，保留以兼容）
 export type CatAction = 'cat-sleep' | 'cat-play' | 'cat-stare' | 'cat-stretch'

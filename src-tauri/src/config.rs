@@ -18,6 +18,8 @@ pub struct AppConfig {
     pub threshold_config: ThresholdConfig,
     #[serde(default)]
     pub growth_data: PetGrowthData,
+    #[serde(default)]
+    pub notification_config: NotificationConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -419,7 +421,38 @@ impl From<LegacyModelConfig> for ModelConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PollingConfig {
     pub interval_minutes: u64,
+    /// 是否启用自适应轮询
+    #[serde(default)]
+    pub adaptive_polling: bool,
+    /// 自适应轮询配置
+    #[serde(default)]
+    pub adaptive_config: AdaptivePollingConfig,
 }
+
+/// 自适应轮询配置
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AdaptivePollingConfig {
+    /// 高使用率时的轮询间隔（分钟）
+    #[serde(default = "default_high_usage_interval")]
+    pub high_usage_interval: u64,
+    /// 低使用率时的轮询间隔（分钟）
+    #[serde(default = "default_low_usage_interval")]
+    pub low_usage_interval: u64,
+    /// 高使用率阈值（%）
+    #[serde(default = "default_high_usage_threshold")]
+    pub high_usage_threshold: u32,
+    /// 低使用率阈值（%）
+    #[serde(default = "default_low_usage_threshold")]
+    pub low_usage_threshold: u32,
+    /// 配额耗尽时是否暂停轮询
+    #[serde(default)]
+    pub pause_when_exhausted: bool,
+}
+
+fn default_high_usage_interval() -> u64 { 1 }
+fn default_low_usage_interval() -> u64 { 5 }
+fn default_high_usage_threshold() -> u32 { 70 }
+fn default_low_usage_threshold() -> u32 { 30 }
 
 impl Default for AppConfig {
     fn default() -> Self {
@@ -528,6 +561,29 @@ pub fn load_config(app: &AppHandle) -> Result<AppConfig, String> {
         }
     }
 }
+
+/// 预警通知配置
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct NotificationConfig {
+    /// 是否启用通知
+    #[serde(default)]
+    pub enabled: bool,
+    /// 预警阈值（超过此值发送通知）
+    #[serde(default = "default_notification_threshold")]
+    pub threshold: u32,
+    /// 是否启用声音
+    #[serde(default)]
+    pub sound_enabled: bool,
+    /// 通知冷却时间（分钟），避免频繁通知
+    #[serde(default = "default_notification_cooldown")]
+    pub cooldown_minutes: u32,
+    /// 上次通知时间
+    #[serde(default)]
+    pub last_notification_time: Option<i64>,
+}
+
+fn default_notification_threshold() -> u32 { 80 }
+fn default_notification_cooldown() -> u32 { 30 }
 
 pub fn save_config(app: &AppHandle, config: &AppConfig) -> Result<(), String> {
     let config_path = app.path().app_config_dir()

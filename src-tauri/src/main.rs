@@ -7,6 +7,8 @@ mod commands;
 mod settings_commands;
 mod tray;
 mod windows;
+mod database;
+mod notifications;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,6 +16,13 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             commands::get_current_usage,
+            commands::manual_refresh,
+            commands::get_history,
+            commands::get_history_stats,
+            commands::export_history_csv,
+            commands::cleanup_history,
+            commands::update_notification_config,
+            commands::test_notification,
             windows::open_info_panel,
             windows::close_info_panel,
             windows::open_settings_panel,
@@ -41,6 +50,13 @@ pub fn run() {
 
             // 初始化配置（确保配置文件存在）
             if let Err(e) = config::load_config(app.handle()) {
+                eprintln!("Failed to initialize config: {}", e);
+            }
+
+            // 初始化历史数据库
+            if let Err(e) = database::init_database() {
+                eprintln!("Failed to initialize database: {}", e);
+            }
                 eprintln!("Failed to initialize config: {}", e);
             }
 
