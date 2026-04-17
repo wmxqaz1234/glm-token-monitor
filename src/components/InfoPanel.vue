@@ -20,8 +20,8 @@ function getStatusColor(percent: number): string {
   if (percent >= 81) return '#EF4444'
   if (percent >= 65) return '#F97316'
   if (percent >= 50) return '#F59E0B'
-  if (percent >= 25) return '#1890FF'
-  return '#10B981'
+  if (percent >= 25) return '#0EA5E9'  // 天蓝色
+  return '#1E3A8A'  // 深蓝色
 }
 
 // 格式化重置时间（简化版）

@@ -22,8 +22,8 @@ export interface UsageDetail {
 }
 
 export const COLORS: Record<PetState, string> = {
-  Fresh: '#10B981',
-  Flow: '#1890FF',
+  Fresh: '#1E3A8A',    // 深蓝色
+  Flow: '#0EA5E9',     // 天蓝色
   Warning: '#F59E0B',
   Panic: '#F97316',
   Exhausted: '#EF4444',

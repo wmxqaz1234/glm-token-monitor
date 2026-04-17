@@ -198,8 +198,8 @@ function getStatusColor(percent: number): string {
   if (percent >= 81) return '#EF4444'
   if (percent >= 65) return '#F97316'
   if (percent >= 50) return '#F59E0B'
-  if (percent >= 25) return '#1890FF'
-  return '#10B981'
+  if (percent >= 25) return '#0EA5E9'  // 天蓝色
+  return '#1E3A8A'  // 深蓝色
 }
 
 // 双击处理 - 阻止全屏
@@ -870,8 +870,8 @@ onUnmounted(() => {
   text-shadow: 0 0 4px currentColor; font-family: 'Press Start 2P', monospace; font-size: 10px;
   position: relative; z-index: 2;
 }
-.holo-bubble.state-fresh .holo-val { color: #34D399; }
-.holo-bubble.state-flow .holo-val { color: #40A9FF; }
+.holo-bubble.state-fresh .holo-val { color: #1E3A8A; }
+.holo-bubble.state-flow .holo-val { color: #0EA5E9; }
 .holo-bubble.state-warning .holo-val { color: #FBBF24; }
 .holo-bubble.state-panic .holo-val { color: #F97316; animation: glitch 0.3s infinite; }
 .holo-bubble.state-dead .holo-val { color: #9CA3AF; }
@@ -897,8 +897,8 @@ onUnmounted(() => {
   fill: none; stroke-width: 2; stroke-linecap: butt;
   transition: stroke-dashoffset 0.5s ease, stroke 0.5s ease;
 }
-.state-fresh .cr-progress { stroke: #34D399; filter: drop-shadow(0 0 4px #34D399); }
-.state-flow .cr-progress { stroke: #40A9FF; filter: drop-shadow(0 0 4px #40A9FF); }
+.state-fresh .cr-progress { stroke: #1E3A8A; filter: drop-shadow(0 0 4px #1E3A8A); }
+.state-flow .cr-progress { stroke: #0EA5E9; filter: drop-shadow(0 0 4px #0EA5E9); }
 .state-warning .cr-progress { stroke: #FBBF24; filter: drop-shadow(0 0 4px #FBBF24); }
 .state-panic .cr-progress { stroke: #F97316; filter: drop-shadow(0 0 6px #F97316); animation: cr-alarm 1s ease infinite alternate; }
 .state-dead .cr-progress { stroke: #9CA3AF; }
@@ -909,8 +909,8 @@ onUnmounted(() => {
   background: rgba(15,23,42,0.9); padding: 2px 3px; border-radius: 3px; border: 1px solid #1E293B;
   z-index: 25;
 }
-.state-fresh .cr-center-val { color: #34D399; }
-.state-flow .cr-center-val { color: #40A9FF; }
+.state-fresh .cr-center-val { color: #1E3A8A; }
+.state-flow .cr-center-val { color: #0EA5E9; }
 .state-warning .cr-center-val { color: #FBBF24; }
 .state-panic .cr-center-val { color: #F97316; }
 .state-dead .cr-center-val { color: #9CA3AF; }
@@ -931,8 +931,8 @@ onUnmounted(() => {
 .aura-field .r1 { animation-delay: 0s; }
 .aura-field .r2 { animation-delay: 1s; }
 .aura-field .r3 { animation-delay: 2s; }
-.state-fresh .aura-ripple { border-color: #34D399; }
-.state-flow .aura-ripple { border-color: #40A9FF; }
+.state-fresh .aura-ripple { border-color: #1E3A8A; }
+.state-flow .aura-ripple { border-color: #0EA5E9; }
 .state-warning .aura-ripple { border-color: #FBBF24; animation-duration: 1.5s; }
 .state-panic .aura-ripple { border-color: #F97316; animation-duration: 0.8s; border-width: 2px; }
 .state-dead .aura-ripple { border-color: #6B7280; animation: none; opacity: 0.2; width: 40px; height: 40px; }
@@ -943,8 +943,8 @@ onUnmounted(() => {
   background: rgba(0,0,0,0.8); padding: 2px 3px; border-radius: 2px; border: 1px dashed;
   z-index: 25;
 }
-.state-fresh .aura-val { color: #34D399; border-color: #34D399; }
-.state-flow .aura-val { color: #40A9FF; border-color: #40A9FF; }
+.state-fresh .aura-val { color: #1E3A8A; border-color: #1E3A8A; }
+.state-flow .aura-val { color: #0EA5E9; border-color: #0EA5E9; }
 .state-warning .aura-val { color: #FBBF24; border-color: #FBBF24; }
 .state-panic .aura-val { color: #F97316; border-color: #F97316; }
 .state-dead .aura-val { color: #9CA3AF; border-color: #9CA3AF; }
@@ -966,8 +966,8 @@ onUnmounted(() => {
 .ec-pixel {
   width: 4px; height: 4px; background: #1E293B; transition: all 0.3s;
 }
-.state-fresh .ec-pixel.on { background: #34D399; box-shadow: 0 0 3px #34D399; }
-.state-flow .ec-pixel.on { background: #40A9FF; box-shadow: 0 0 3px #40A9FF; }
+.state-fresh .ec-pixel.on { background: #1E3A8A; box-shadow: 0 0 3px #1E3A8A; }
+.state-flow .ec-pixel.on { background: #0EA5E9; box-shadow: 0 0 3px #0EA5E9; }
 .state-warning .ec-pixel.on { background: #FBBF24; box-shadow: 0 0 3px #FBBF24; }
 .state-panic .ec-pixel.on { background: #F97316; box-shadow: 0 0 4px #F97316; animation: ec-flash 0.5s infinite alternate; }
 .state-dead .ec-pixel.on { background: #6B7280; box-shadow: none; }
@@ -977,8 +977,8 @@ onUnmounted(() => {
   position: absolute; top: -16px; right: 0px; font-family: 'Press Start 2P', monospace; font-size: 10px;
   background: rgba(15,23,42,0.9); padding: 1px 3px; border-radius: 2px; border: 1px solid #1E293B;
 }
-.state-fresh .ec-val { color: #34D399; }
-.state-flow .ec-val { color: #40A9FF; }
+.state-fresh .ec-val { color: #1E3A8A; }
+.state-flow .ec-val { color: #0EA5E9; }
 .state-warning .ec-val { color: #FBBF24; }
 .state-panic .ec-val { color: #F97316; }
 .state-dead .ec-val { color: #9CA3AF; }
@@ -999,8 +999,8 @@ onUnmounted(() => {
   position: absolute; bottom: 0; left: 0; right: 0;
   transition: height 0.5s ease, background 0.5s ease;
 }
-.state-fresh .sf-bar-fill { background: linear-gradient(to top, #34D399, #6EE7B7); }
-.state-flow .sf-bar-fill { background: linear-gradient(to top, #1890FF, #40A9FF); }
+.state-fresh .sf-bar-fill { background: linear-gradient(to top, #1E3A8A, #3B82F6); }
+.state-flow .sf-bar-fill { background: linear-gradient(to top, #0284C7, #0EA5E9); }
 .state-warning .sf-bar-fill { background: linear-gradient(to top, #F59E0B, #FBBF24); }
 .state-panic .sf-bar-fill { background: linear-gradient(to top, #EA580C, #F97316); animation: sf-flash 0.8s infinite alternate; }
 .state-dead .sf-bar-fill { background: linear-gradient(to top, #4B5563, #6B7280); animation: sf-flash 0.8s infinite alternate; }
@@ -1011,8 +1011,8 @@ onUnmounted(() => {
   background: rgba(15,23,42,0.9); padding: 1px 2px; border-radius: 2px; border: 1px solid #1E293B;
   white-space: nowrap;
 }
-.state-fresh .sf-text { color: #34D399; }
-.state-flow .sf-text { color: #40A9FF; }
+.state-fresh .sf-text { color: #1E3A8A; }
+.state-flow .sf-text { color: #0EA5E9; }
 .state-warning .sf-text { color: #FBBF24; }
 .state-panic .sf-text { color: #F97316; }
 .state-dead .sf-text { color: #9CA3AF; }
@@ -1264,8 +1264,8 @@ onUnmounted(() => {
 	}
 
 	/* 根据状态改变颜色 */
-	.pet-fresh .refresh-countdown span { color: #34d399; border-color: rgba(52, 211, 153, 0.3); }
-	.pet-flow .refresh-countdown span { color: #40a9ff; border-color: rgba(96, 165, 250, 0.3); }
+	.pet-fresh .refresh-countdown span { color: #1E3A8A; border-color: rgba(30, 58, 138, 0.3); }
+	.pet-flow .refresh-countdown span { color: #0EA5E9; border-color: rgba(14, 165, 233, 0.3); }
 	.pet-warning .refresh-countdown span { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); }
 	.pet-panic .refresh-countdown span { color: #f97316; border-color: rgba(249, 115, 22, 0.3); }
 	.pet-dead .refresh-countdown span { color: #9ca3af; border-color: rgba(239, 68, 68, 0.3); }
