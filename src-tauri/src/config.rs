@@ -63,6 +63,7 @@ impl Default for PetConfig {
         Self {
             selected_pet: "cat".to_string(),
             action_interval: 25,
+            accessories: PetAccessories::default(),
         }
     }
 }
@@ -516,6 +517,7 @@ pub fn load_config(app: &AppHandle) -> Result<AppConfig, String> {
                     pet_config: PetConfig::default(),
                     basic_config: BasicConfig::default(),
                     threshold_config: ThresholdConfig::default(),
+                    growth_data: PetGrowthData::default(),
                 };
                 // 保存迁移后的配置
                 save_config(app, &migrated_config)?;

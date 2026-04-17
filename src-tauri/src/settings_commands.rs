@@ -234,30 +234,6 @@ pub async fn test_api_connection(
     }
 }
 
-/// 更新成长数据（当获取到新的 token 使用量时调用）
-#[tauri::command]
-pub async fn update_growth_data(
-    app: AppHandle,
-    tokens_usage: u64,
-) -> Result<crate::config::PetGrowthData, String> {
-    let mut config = load_config(&app)?;
-
-    // 添加 token 使用量
-    let upgraded = config.growth_data.add_tokens(tokens_usage);
-
-    save_config(&app, &config)?;
-
-    // 如果升级了，触发特殊事件
-    if upgraded {
-        let _ = app.emit("level-up", config.growth_data.level);
-    }
-
-    // 触发配置变更事件
-    let _ = app.emit("config-changed", &config);
-
-    Ok(config.growth_data)
-}
-
 /// 领取每日成长奖励
 #[tauri::command]
 pub async fn claim_daily_growth_reward(
