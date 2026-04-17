@@ -4,7 +4,6 @@
 use rusqlite::{Connection, Result, params};
 use std::path::{PathBuf};
 use dirs::config_dir;
-use chrono::{Utc, DateTime};
 
 /// 数据库文件名
 const DB_NAME: &str = "plan-guard.db";
@@ -251,4 +250,85 @@ pub fn export_to_csv(hours: u32) -> Result<String, Box<dyn std::error::Error>> {
     }
 
     Ok(csv)
+}
+
+/// 累积 Token 统计（用于宠物成长系统）
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CumulativeStats {
+    pub total_tokens_used: u64,     // 累积使用总量
+    pub total_records: i64,          // 记录条数
+    pub first_record_date: String,   // 首次记录日期
+    pub last_record_date: String,    // 最近记录日期
+    pub daily_average: f64,          // 日均使用量
+}
+
+/// 获取累积 Token 使用量（用于宠物成长系统）
+pub fn get_cumulative_stats() -> Result<CumulativeStats, Box<dyn std::error::Error>> {
+    let db_path = get_db_path()?;
+    let conn = Connection::open(&db_path)?;
+
+    // 累积使用总量
+    let total_tokens_used: u64 = conn.query_row(
+        "SELECT COALESCE(SUM(tokens_used), 0) FROM usage_log WHERE tokens_used IS NOT NULL",
+        [],
+        |row| row.get(0)
+    ).unwrap_or(0);
+
+    // 总记录数
+    let total_records: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM usage_log",
+        [],
+        |row| row.get(0)
+    ).unwrap_or(0);
+
+    // 首次记录日期
+    let first_record_date: String = conn.query_row(
+        "SELECT DATE(MIN(timestamp)) FROM usage_log",
+        [],
+        |row| row.get(0)
+    ).unwrap_or_else(|_| "暂无数据".to_string());
+
+    // 最近记录日期
+    let last_record_date: String = conn.query_row(
+        "SELECT DATE(MAX(timestamp)) FROM usage_log",
+        [],
+        |row| row.get(0)
+    ).unwrap_or_else(|_| "暂无数据".to_string());
+
+    // 计算日均使用量
+    let daily_average = if total_records > 0 {
+        // 获取不重复的日期数
+        let unique_days: i64 = conn.query_row(
+            "SELECT COUNT(DISTINCT DATE(timestamp)) FROM usage_log",
+            [],
+            |row| row.get(0)
+        ).unwrap_or(1);
+        total_tokens_used as f64 / unique_days.max(1) as f64
+    } else {
+        0.0
+    };
+
+    Ok(CumulativeStats {
+        total_tokens_used,
+        total_records,
+        first_record_date,
+        last_record_date,
+        daily_average,
+    })
+}
+
+/// 获取指定日期范围内的累积使用量
+pub fn get_cumulative_in_range(days: u32) -> Result<u64, Box<dyn std::error::Error>> {
+    let db_path = get_db_path()?;
+    let conn = Connection::open(&db_path)?;
+
+    let total: u64 = conn.query_row(
+        "SELECT COALESCE(SUM(tokens_used), 0) FROM usage_log
+         WHERE tokens_used IS NOT NULL
+         AND datetime(timestamp) >= datetime('now', '-' || ?1 || ' days')",
+        params![days],
+        |row| row.get(0)
+    ).unwrap_or(0);
+
+    Ok(total)
 }

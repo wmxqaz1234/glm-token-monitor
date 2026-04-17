@@ -1,6 +1,6 @@
 use crate::events::UsageData;
 use crate::polling::fetch_usage;
-use crate::database::{self, HistoryEntry, HistoryStats};
+use crate::database::{self, HistoryEntry, HistoryStats, CumulativeStats};
 use crate::config::{load_config, save_config, AppConfig, NotificationConfig};
 use crate::notifications;
 use tauri::AppHandle;
@@ -44,6 +44,19 @@ pub fn get_history(hours: u32) -> Result<Vec<HistoryEntry>, String> {
 #[tauri::command]
 pub fn get_history_stats() -> Result<HistoryStats, String> {
     database::get_history_stats().map_err(|e| e.to_string())
+}
+
+/// 获取累积 Token 统计（用于宠物成长系统）
+#[tauri::command]
+pub fn get_cumulative_stats() -> Result<CumulativeStats, String> {
+    database::get_cumulative_stats().map_err(|e| e.to_string())
+}
+
+/// 获取指定日期范围内的累积使用量
+/// days: 查询最近 N 天的累积量
+#[tauri::command]
+pub fn get_cumulative_in_range(days: u32) -> Result<u64, String> {
+    database::get_cumulative_in_range(days).map_err(|e| e.to_string())
 }
 
 /// 导出历史数据为 CSV

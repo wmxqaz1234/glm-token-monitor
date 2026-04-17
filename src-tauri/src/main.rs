@@ -19,6 +19,8 @@ pub fn run() {
             commands::manual_refresh,
             commands::get_history,
             commands::get_history_stats,
+            commands::get_cumulative_stats,
+            commands::get_cumulative_in_range,
             commands::export_history_csv,
             commands::cleanup_history,
             commands::update_notification_config,
@@ -56,8 +58,6 @@ pub fn run() {
             // 初始化历史数据库
             if let Err(e) = database::init_database() {
                 eprintln!("Failed to initialize database: {}", e);
-            }
-                eprintln!("Failed to initialize config: {}", e);
             }
 
             // 创建系统托盘（Windows 和 macOS）

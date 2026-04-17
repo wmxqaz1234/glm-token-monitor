@@ -32,6 +32,10 @@ pub struct UsageData {
     pub tokens_usage: Option<u64>,
     /// 周 Token 实际使用量
     pub weekly_tokens_usage: Option<u64>,
+    /// 5h Token 配额总量（用于计算累积使用量）
+    pub tokens_limit: Option<u64>,
+    /// 5h Token 剩余量
+    pub tokens_remaining: Option<u64>,
 }
 
 /// 工具使用详情（用于前端显示）

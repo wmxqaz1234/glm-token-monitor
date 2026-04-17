@@ -90,7 +90,13 @@ export interface AppConfig {
 
 // 宠物成长数据
 export interface PetGrowthData {
-  level: number           // 当前等级 (1-10)
-  total_tokens: number    // 累计使用的 token 总数
-  unlocked_items: string[] // 已解锁的物品
+  level: number              // 当前等级 (1-10)
+  current_xp: number         // 当前经验值
+  total_xp: number           // 累计总经验值
+  today_max_percent: number  // 今日最高用完率
+  today_claimed: boolean     // 今日是否已领取奖励
+  high_usage_streak: number  // 连续高用完率天数 (≥70%)
+  today_date: string         // 今日日期 (YYYY-MM-DD)
+  milestones_reached: number[] // 已达成的用完率里程碑
+  unlocked_items: string[]   // 已解锁的物品
 }

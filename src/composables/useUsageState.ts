@@ -14,6 +14,10 @@ export interface UsageData {
   time_reset_time?: number    // 月度额度下次重置时间（时间戳毫秒）
   level?: string             // 会员等级
   usage_details?: UsageDetail[] // 工具使用详情
+  tokens_usage?: number      // 5h Token实际使用量
+  weekly_tokens_usage?: number // 周 Token实际使用量
+  tokens_limit?: number      // 5h Token配额总量（方案B：用于计算累积使用量）
+  tokens_remaining?: number  // 5h Token剩余量（方案B）
 }
 
 export interface UsageDetail {

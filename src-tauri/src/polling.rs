@@ -59,6 +59,8 @@ pub async fn fetch_usage(app: &AppHandle) -> Result<UsageData, String> {
     let mut tokens_percent: u32 = 0;
     let mut tokens_reset_time: Option<i64> = None;
     let mut tokens_usage: Option<u64> = None;
+    let mut tokens_limit: Option<u64> = None;      // 配额总量（方案B）
+    let mut tokens_remaining: Option<u64> = None;  // 剩余量（方案B）
     let mut weekly_tokens_percent: u32 = 0;
     let mut weekly_tokens_reset_time: Option<i64> = None;
     let mut weekly_tokens_usage: Option<u64> = None;
@@ -94,6 +96,9 @@ pub async fn fetch_usage(app: &AppHandle) -> Result<UsageData, String> {
                         tokens_percent = item.percentage.unwrap_or(0);
                         tokens_reset_time = item.next_reset_time;
                         tokens_usage = item.usage.map(|u| u as u64);
+                        // 方案B：提取配额总量和剩余量
+                        tokens_limit = item.number.map(|u| u as u64);
+                        tokens_remaining = item.remaining.map(|u| u as u64);
                     }
                 }
             }
@@ -116,6 +121,8 @@ pub async fn fetch_usage(app: &AppHandle) -> Result<UsageData, String> {
         usage_details,
         tokens_usage,
         weekly_tokens_usage,
+        tokens_limit,
+        tokens_remaining,
     })
 }
 
