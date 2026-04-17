@@ -21,7 +21,19 @@ export interface UsageDetail {
   usage: number
 }
 
-export const COLORS: Record<PetState, string> = {
+export interface ThresholdConfig {
+  fresh_threshold: number
+  flow_threshold: number
+  warning_threshold: number
+  panic_threshold: number
+  fresh_color?: string
+  flow_color?: string
+  warning_color?: string
+  panic_color?: string
+  exhausted_color?: string
+}
+
+export const DEFAULT_COLORS: Record<PetState, string> = {
   Fresh: '#1E3A8A',    // 深蓝色
   Flow: '#0EA5E9',     // 天蓝色
   Warning: '#F59E0B',
@@ -30,23 +42,50 @@ export const COLORS: Record<PetState, string> = {
   Dead: '#6B7280'
 }
 
-export function useUsageState(used: Ref<number>, total: Ref<number>) {
+export function useUsageState(
+  used: Ref<number>,
+  total: Ref<number>,
+  thresholdConfig?: Ref<ThresholdConfig | undefined>
+) {
   const usagePercent = computed(() => {
     if (total.value === 0) return 0
     return (used.value / total.value) * 100
   })
 
+  // 获取有效颜色（自定义或默认）
+  const getColors = () => {
+    const config = thresholdConfig?.value
+    return {
+      Fresh: config?.fresh_color || DEFAULT_COLORS.Fresh,
+      Flow: config?.flow_color || DEFAULT_COLORS.Flow,
+      Warning: config?.warning_color || DEFAULT_COLORS.Warning,
+      Panic: config?.panic_color || DEFAULT_COLORS.Panic,
+      Exhausted: config?.exhausted_color || DEFAULT_COLORS.Exhausted,
+      Dead: DEFAULT_COLORS.Dead
+    }
+  }
+
+  const colors = computed(() => getColors())
+
   const petState = computed<PetState>(() => {
     const p = usagePercent.value
-    if (p <= 24) return 'Fresh'
-    if (p <= 49) return 'Flow'
-    if (p <= 64) return 'Warning'
-    if (p <= 80) return 'Panic'
-    if (p <= 94) return 'Exhausted'
+    const config = thresholdConfig?.value
+
+    // 使用配置的阈值，如果没有配置则使用默认值
+    const fresh = config?.fresh_threshold ?? 24
+    const flow = config?.flow_threshold ?? 49
+    const warning = config?.warning_threshold ?? 64
+    const panic = config?.panic_threshold ?? 80
+
+    if (p <= fresh) return 'Fresh'
+    if (p <= flow) return 'Flow'
+    if (p <= warning) return 'Warning'
+    if (p <= panic) return 'Panic'
+    if (p < 100) return 'Exhausted'
     return 'Dead'
   })
 
-  const stateColor = computed(() => COLORS[petState.value])
+  const stateColor = computed(() => colors.value[petState.value])
 
   const gradientColor = computed<string>(() => {
     const p = usagePercent.value
@@ -69,6 +108,7 @@ export function useUsageState(used: Ref<number>, total: Ref<number>) {
     petState,
     stateColor,
     gradientColor,
-    gradientStrokeColor
+    gradientStrokeColor,
+    colors
   }
 }

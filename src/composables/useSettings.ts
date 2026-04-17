@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
-import type { AppConfig, ModelConfig, PetType, BasicConfig } from '../types/config'
+import type { AppConfig, ModelConfig, PetType, BasicConfig, ThresholdConfig } from '../types/config'
 
 const globalConfig = ref<AppConfig>({
   api_config: {
@@ -22,6 +22,12 @@ const globalConfig = ref<AppConfig>({
   basic_config: {
     enable_glow: true,
     auto_start: false
+  },
+  threshold_config: {
+    fresh_threshold: 25,
+    flow_threshold: 50,
+    warning_threshold: 75,
+    panic_threshold: 90
   }
 })
 
@@ -161,6 +167,29 @@ export function useSettings() {
     }
   }
 
+  // 更新宠物配件
+  async function updatePetAccessories(key: string, value: boolean | string | null) {
+    if (!config.value?.pet_config) {
+      config.value.pet_config = { selected_pet: 'spirit', action_interval: 25, accessories: {} }
+    }
+    if (!config.value.pet_config.accessories) {
+      config.value.pet_config.accessories = {}
+    }
+
+    // 处理帽子选择（互斥）
+    if (key === 'hat') {
+      if (value === null) {
+        config.value.pet_config.accessories.hat = null
+      } else {
+        // 取消其他帽子选择
+        config.value.pet_config.accessories.hat = value as 'cap' | 'beanie' | 'straw_hat'
+      }
+    } else {
+      // 布尔值配件（墨镜、创口贴、蝴蝶结）
+      config.value.pet_config.accessories[key as 'sunglasses' | 'bandage' | 'bow'] = value as boolean
+    }
+  }
+
   // 基础配置
   const basicConfig = computed(() => config.value?.basic_config)
 
@@ -191,6 +220,46 @@ export function useSettings() {
     return key && key.trim().length > 0
   })
 
+  // 阈值配置
+  const thresholdConfig = computed(() => config.value?.threshold_config)
+
+  // 更新阈值配置
+  async function updateThresholds(thresholds: {
+    fresh_threshold: number
+    flow_threshold: number
+    warning_threshold: number
+    panic_threshold: number
+  }) {
+    try {
+      await invoke('update_threshold_config', thresholds)
+      // 重新加载配置
+      await loadConfig()
+    } catch (err) {
+      error.value = String(err)
+      console.error('Failed to update thresholds:', err)
+      throw err
+    }
+  }
+
+  // 更新颜色配置
+  async function updateColors(colors: {
+    fresh_color?: string
+    flow_color?: string
+    warning_color?: string
+    panic_color?: string
+    exhausted_color?: string
+  }) {
+    try {
+      await invoke('update_color_config', colors)
+      // 重新加载配置
+      await loadConfig()
+    } catch (err) {
+      error.value = String(err)
+      console.error('Failed to update colors:', err)
+      throw err
+    }
+  }
+
   return {
     config,
     isLoading,
@@ -208,8 +277,12 @@ export function useSettings() {
     petConfig,
     updatePetType,
     updateActionInterval,
+    updatePetAccessories,
     basicConfig,
     updateEnableGlow,
-    updateAutoStart
+    updateAutoStart,
+    thresholdConfig,
+    updateThresholds,
+    updateColors
   }
 }

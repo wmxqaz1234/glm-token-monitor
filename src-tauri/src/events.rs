@@ -28,6 +28,10 @@ pub struct UsageData {
     pub level: String,
     /// 工具使用详情
     pub usage_details: Vec<UsageDetailData>,
+    /// 5h Token 实际使用量（用于成长系统）
+    pub tokens_usage: Option<u64>,
+    /// 周 Token 实际使用量
+    pub weekly_tokens_usage: Option<u64>,
 }
 
 /// 工具使用详情（用于前端显示）

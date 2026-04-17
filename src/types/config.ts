@@ -39,6 +39,15 @@ export type DogAction = 'dog-sit' | 'dog-bark' | 'dog-walk' | 'dog-beg'
 export interface PetConfig {
   selected_pet: PetType
   action_interval: number  // 秒
+  accessories?: PetAccessories
+}
+
+// 宠物配件
+export interface PetAccessories {
+  sunglasses?: boolean   // 墨镜
+  bandage?: boolean      // 创口贴
+  bow?: boolean          // 蝴蝶结
+  hat?: 'cap' | 'beanie' | 'straw_hat' | null  // 帽子
 }
 
 // 基础设置配置
@@ -48,10 +57,32 @@ export interface BasicConfig {
   theme: 'dark' | 'light'  // 主题模式
 }
 
+// 阈值配置
+export interface ThresholdConfig {
+  fresh_threshold: number       // Fresh 状态上限
+  flow_threshold: number        // Flow 状态上限
+  warning_threshold: number     // Warning 状态上限
+  panic_threshold: number       // Panic 状态上限
+  fresh_color?: string          // 自定义 Fresh 颜色
+  flow_color?: string           // 自定义 Flow 颜色
+  warning_color?: string        // 自定义 Warning 颜色
+  panic_color?: string          // 自定义 Panic 颜色
+  exhausted_color?: string      // 自定义 Exhausted 颜色
+}
+
 export interface AppConfig {
   api_config: ApiConfig
   polling_config: PollingConfig
   display_config: DisplayConfig
   pet_config: PetConfig
   basic_config: BasicConfig
+  threshold_config?: ThresholdConfig
+  growth_data?: PetGrowthData
+}
+
+// 宠物成长数据
+export interface PetGrowthData {
+  level: number           // 当前等级 (1-10)
+  total_tokens: number    // 累计使用的 token 总数
+  unlocked_items: string[] // 已解锁的物品
 }

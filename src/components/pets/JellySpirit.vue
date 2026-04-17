@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 interface Props {
   color: string          // 主色
@@ -8,12 +8,41 @@ interface Props {
   width?: number
   height?: number
   state?: 'Fresh' | 'Flow' | 'Warning' | 'Panic' | 'Exhausted' | 'Dead'
+  accessories?: {
+    sunglasses?: boolean
+    bandage?: boolean
+    bow?: boolean
+    hat?: 'cap' | 'beanie' | 'straw_hat' | null
+  }
 }
 
 const props = withDefaults(defineProps<Props>(), {
   eyeColor: '#1F2937',
   width: 100,
-  height: 100
+  height: 100,
+  accessories: () => ({})
+})
+
+// 状态变化动画
+const isStateTransitioning = ref(false)
+const previousState = ref<typeof props.state | null>(null)
+
+watch(() => props.state, (newState, oldState) => {
+  if (oldState && oldState !== newState) {
+    previousState.value = oldState
+    isStateTransitioning.value = true
+    setTimeout(() => {
+      isStateTransitioning.value = false
+    }, 500)
+  }
+})
+
+// 状态转换动画类名
+const stateTransitionClass = computed(() => {
+  if (!isStateTransitioning.value) return ''
+  const from = previousState.value?.toLowerCase()
+  const to = props.state?.toLowerCase()
+  return `transition-${from}-to-${to}`
 })
 
 // 皇冠配置
@@ -107,13 +136,13 @@ const particles = computed(() => {
   switch (props.state) {
     case 'Fresh':
       return [
-        { id: 1, type: 'heart', x: 20, y: 10, delay: 0, size: 6 },
-        { id: 2, type: 'heart', x: 44, y: 15, delay: 1.5, size: 5 },
-        { id: 3, type: 'heart', x: 32, y: 8, delay: 3, size: 4 }
+        { id: 1, type: 'heart', x: 8, y: 28, delay: 0, size: 6 },
+        { id: 2, type: 'heart', x: 56, y: 32, delay: 1.5, size: 5 },
+        { id: 3, type: 'heart', x: 6, y: 38, delay: 3, size: 4 }
       ]
     case 'Flow':
       return [
-        { id: 1, type: 'thought', x: 32, y: 2, delay: 0, size: 8 }
+        { id: 1, type: 'thought', x: 56, y: 30, delay: 0, size: 8 }
       ]
     case 'Warning':
       return [
@@ -122,12 +151,12 @@ const particles = computed(() => {
       ]
     case 'Panic':
       return [
-        { id: 1, type: 'exclaim', x: 32, y: 0, delay: 0, size: 10 }
+        { id: 1, type: 'exclaim', x: 56, y: 25, delay: 0, size: 10 }
       ]
     case 'Exhausted':
       return [
-        { id: 1, type: 'star', x: 20, y: 5, delay: 0, size: 5 },
-        { id: 2, type: 'star', x: 44, y: 8, delay: 1, size: 4 }
+        { id: 1, type: 'star', x: 6, y: 30, delay: 0, size: 5 },
+        { id: 2, type: 'star', x: 58, y: 35, delay: 1, size: 4 }
       ]
     case 'Dead':
       return [
@@ -142,6 +171,9 @@ const particles = computed(() => {
 const isHovered = ref(false)
 const isClicked = ref(false)
 const isLongPressed = ref(false)
+const isBeingPetted = ref(false)
+const petStrokeCount = ref(0)
+let petStrokeTimer: number | null = null
 
 // 鼠标位置（用于眼神跟随）
 const mousePosition = ref({ x: 32, y: 32 })
@@ -158,8 +190,29 @@ function handleMouseLeave() {
 
 function handleClick() {
   isClicked.value = true
-  setTimeout(() => isClicked.value = false, 500)
+  isBeingPetted.value = true
+
+  // 抚摸计数
+  petStrokeCount.value++
+  if (petStrokeTimer) clearTimeout(petStrokeTimer)
+  petStrokeTimer = window.setTimeout(() => {
+    petStrokeCount.value = 0
+  }, 2000)
+
+  // 重置状态
+  setTimeout(() => {
+    isClicked.value = false
+    isBeingPetted.value = false
+  }, 600)
 }
+
+// 抚摸等级（基于连续抚摸次数）
+const petLevel = computed(() => {
+  if (petStrokeCount.value >= 5) return 'super-happy'
+  if (petStrokeCount.value >= 3) return 'very-happy'
+  if (petStrokeCount.value >= 1) return 'happy'
+  return ''
+})
 
 function handleMouseDown() {
   // 长按检测
@@ -182,25 +235,81 @@ function handleMouseMove(event: MouseEvent) {
   }
 }
 
-// 计算眼神偏移（让眼睛看向鼠标）
+// 计算眼神偏移（让眼睛看向鼠标）- 优化版
 const eyeOffset = computed(() => {
-  if (!isHovered.value) return { x: 0, y: 0 }
+  const centerX = 32
+  const centerY = 32
+  const maxOffset = 2.5  // 增加移动范围
 
-  const maxOffset = 1.5
-  const dx = mousePosition.value.x - 32
-  const dy = mousePosition.value.y - 32
+  // 计算鼠标相对于中心的角度和距离
+  const dx = mousePosition.value.x - centerX
+  const dy = mousePosition.value.y - centerY
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  const angle = Math.atan2(dy, dx)
+
+  // 根据距离计算偏移量（距离越近偏移越小）
+  const maxDistance = 50  // 鼠标影响范围
+  const offsetAmount = Math.min(distance / maxDistance, 1) * maxOffset
 
   return {
-    x: Math.max(-maxOffset, Math.min(maxOffset, dx / 10)),
-    y: Math.max(-maxOffset, Math.min(maxOffset, dy / 10))
+    x: Math.cos(angle) * offsetAmount,
+    y: Math.sin(angle) * offsetAmount
   }
 })
+
+// 瞳孔位置（更自然的眼神效果）
+const pupilOffset = computed(() => {
+  const centerX = 32
+  const centerY = 32
+  const maxPupilOffset = 1.2
+
+  const dx = mousePosition.value.x - centerX
+  const dy = mousePosition.value.y - centerY
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  const angle = Math.atan2(dy, dx)
+
+  const maxDistance = 40
+  const offsetAmount = Math.min(distance / maxDistance, 1) * maxPupilOffset
+
+  return {
+    x: Math.cos(angle) * offsetAmount,
+    y: Math.sin(angle) * offsetAmount
+  }
+})
+
+// 颜色变亮函数
+function lightenColor(color: string, percent: number): string {
+  const num = parseInt(color.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent)
+  const R = Math.min(255, (num >> 16) + amt)
+  const G = Math.min(255, ((num >> 8) & 0x00FF) + amt)
+  const B = Math.min(255, (num & 0x0000FF) + amt)
+  return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`
+}
+
+// 颜色变暗函数
+function darkenColor(color: string, percent: number): string {
+  const num = parseInt(color.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent)
+  const R = Math.max(0, (num >> 16) - amt)
+  const G = Math.max(0, ((num >> 8) & 0x00FF) - amt)
+  const B = Math.max(0, (num & 0x0000FF) - amt)
+  return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`
+}
 </script>
 
 <template>
   <div
     class="spirit-container"
-    :class="{ 'is-hovered': isHovered, 'is-clicked': isClicked, 'is-long-pressed': isLongPressed }"
+    :class="{
+      'is-hovered': isHovered,
+      'is-clicked': isClicked,
+      'is-long-pressed': isLongPressed,
+      'is-being-petted': isBeingPetted,
+      'pet-happy': petLevel === 'happy',
+      'pet-very-happy': petLevel === 'very-happy',
+      'pet-super-happy': petLevel === 'super-happy'
+    }"
     :style="{ width: `${width}px`, height: `${height}px` }"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
@@ -251,15 +360,46 @@ const eyeOffset = computed(() => {
           keyTimes="0;0.5;1"
           keySplines="0.5 0 0.5 1; 0.5 0 0.5 1"
         />
-        <!-- 身体 - 完整的椭圆形状 -->
+        <!-- 身体 - 完整的椭圆形状，带渐变和阴影 -->
+        <defs>
+          <!-- 主身体渐变 -->
+          <radialGradient :id="`bodyGradient-${state}`" cx="35%" cy="30%" r="70%">
+            <stop offset="0%" :stop-color="lightenColor(props.color, 30)" />
+            <stop offset="50%" :stop-color="props.color" />
+            <stop offset="100%" :stop-color="darkenColor(props.color, 20)" />
+          </radialGradient>
+          <!-- 内部光泽 -->
+          <radialGradient id="innerGlow" cx="30%" cy="25%" r="50%">
+            <stop offset="0%" stop-color="white" stop-opacity="0.4" />
+            <stop offset="100%" stop-color="white" stop-opacity="0" />
+          </radialGradient>
+          <!-- 阴影滤镜 -->
+          <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.25)" />
+            <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="currentColor" flood-opacity="0.15" />
+          </filter>
+        </defs>
+
+        <!-- 身体阴影层 -->
+        <ellipse
+          cx="32"
+          cy="38"
+          rx="28"
+          ry="28"
+          fill="rgba(0,0,0,0.15)"
+          filter="url(#softShadow)"
+        />
+
+        <!-- 身体主体 -->
         <ellipse
           cx="32"
           cy="36"
-          rx="24"
-          ry="26"
-          :fill="props.color"
+          rx="28"
+          ry="28"
+          :fill="`url(#bodyGradient-${state})`"
           :stroke="props.strokeColor"
           stroke-width="2"
+          :color="props.color"
         >
           <!-- Fresh: 呼吸动画 -->
           <animateTransform
@@ -277,101 +417,231 @@ const eyeOffset = computed(() => {
         <!-- 高光 -->
         <ellipse cx="26" cy="20" rx="6" ry="4" fill="white" opacity="0.3"/>
 
-        <!-- 左眼（带眼神跟随） -->
-        <g :transform="`translate(${eyeOffset.x}, ${eyeOffset.y})`">
-          <circle cx="26" cy="32" r="3" :fill="props.eyeColor">
-            <!-- Fresh: 慢眨眼 -->
-            <animate
-              v-if="state === 'Fresh'"
-              attributeName="r"
-              values="3;0.3;3"
-              dur="4s"
-              repeatCount="indefinite"
-            />
-            <!-- Flow: 正常眨眼 -->
-            <animate
-              v-if="state === 'Flow'"
-              attributeName="r"
-              values="3;0.3;3"
-              dur="3s"
-              repeatCount="indefinite"
-            />
-            <!-- Warning: 眼睛放大 -->
-            <animate
-              v-if="state === 'Warning'"
-              attributeName="r"
-              values="4;4;4"
-              dur="1s"
-            />
-            <!-- Panic: 眼睛瞪大 -->
-            <animate
-              v-if="state === 'Panic'"
-              attributeName="r"
-              values="5;5;5"
-              dur="1s"
-            />
-            <!-- Exhausted: 眼睛半闭 -->
-            <animate
-              v-if="state === 'Exhausted'"
-              attributeName="r"
-              values="3;1.5;3"
-              dur="5s"
-              repeatCount="indefinite"
-            />
-          </circle>
+        <!-- 左眼（优化版：眼白+瞳孔+高光+跟随） -->
+        <g class="eye-left">
+          <!-- 眼白 -->
+          <ellipse cx="24" cy="32" rx="4" ry="4.5" fill="white" opacity="0.9"/>
+          <!-- 瞳孔（带跟随） -->
+          <g :transform="`translate(${pupilOffset.x}, ${pupilOffset.y})`">
+            <circle cx="24" cy="32" r="2.2" :fill="props.eyeColor">
+              <!-- 平滑过渡 -->
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                :from="`${-pupilOffset.x} ${-pupilOffset.y}`"
+                :to="`0 0`"
+                dur="0.2s"
+                fill="freeze"
+              />
+              <!-- Fresh: 慢眨眼 -->
+              <animate
+                v-if="state === 'Fresh'"
+                attributeName="ry"
+                values="4.5;0.5;4.5"
+                dur="4s"
+                repeatCount="indefinite"
+              />
+              <!-- Flow: 正常眨眼 -->
+              <animate
+                v-if="state === 'Flow'"
+                attributeName="ry"
+                values="4.5;0.5;4.5"
+                dur="3s"
+                repeatCount="indefinite"
+              />
+              <!-- Warning: 眼睛放大 -->
+              <animate
+                v-if="state === 'Warning'"
+                attributeName="r"
+                values="2.2;2.8;2.2"
+                dur="1.5s"
+                repeatCount="indefinite"
+              />
+              <!-- Panic: 眼睛瞪大 -->
+              <animate
+                v-if="state === 'Panic'"
+                attributeName="r"
+                values="2.2;3.2;2.2"
+                dur="0.8s"
+                repeatCount="indefinite"
+              />
+              <!-- Exhausted: 眼睛半闭 -->
+              <animate
+                v-if="state === 'Exhausted'"
+                attributeName="ry"
+                values="4.5;2;4.5"
+                dur="5s"
+                repeatCount="indefinite"
+              />
+            </circle>
+            <!-- 瞳孔高光 -->
+            <circle cx="23" cy="31" r="0.7" fill="white" opacity="0.85"/>
+          </g>
         </g>
 
-        <!-- 右眼（带眼神跟随） -->
-        <g :transform="`translate(${eyeOffset.x}, ${eyeOffset.y})`">
-          <circle cx="38" cy="32" r="3" :fill="props.eyeColor">
-            <!-- Fresh: 慢眨眼（稍延迟） -->
-            <animate
-              v-if="state === 'Fresh'"
-              attributeName="r"
-              values="3;0.3;3"
-              dur="4s"
-              begin="0.1s"
-              repeatCount="indefinite"
-            />
-            <!-- Flow: 正常眨眼（稍延迟） -->
-            <animate
-              v-if="state === 'Flow'"
-              attributeName="r"
-              values="3;0.3;3"
-              dur="3s"
-              begin="0.1s"
-              repeatCount="indefinite"
-            />
-            <!-- Warning: 眼睛放大 -->
-            <animate
-              v-if="state === 'Warning'"
-              attributeName="r"
-              values="4;4;4"
-              dur="1s"
-            />
-            <!-- Panic: 眼睛瞪大 -->
-            <animate
-              v-if="state === 'Panic'"
-              attributeName="r"
-              values="5;5;5"
-              dur="1s"
-            />
-            <!-- Exhausted: 眼睛半闭 -->
-            <animate
-              v-if="state === 'Exhausted'"
-              attributeName="r"
-              values="3;1.5;3"
-              dur="5s"
-              begin="0.2s"
-              repeatCount="indefinite"
-            />
-          </circle>
+        <!-- 右眼（优化版：眼白+瞳孔+高光+跟随） -->
+        <g class="eye-right">
+          <!-- 眼白 -->
+          <ellipse cx="40" cy="32" rx="4" ry="4.5" fill="white" opacity="0.9"/>
+          <!-- 瞳孔（带跟随） -->
+          <g :transform="`translate(${pupilOffset.x}, ${pupilOffset.y})`">
+            <circle cx="40" cy="32" r="2.2" :fill="props.eyeColor">
+              <!-- 平滑过渡 -->
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                :from="`${-pupilOffset.x} ${-pupilOffset.y}`"
+                :to="`0 0`"
+                dur="0.2s"
+                fill="freeze"
+              />
+              <!-- Fresh: 慢眨眼（稍延迟） -->
+              <animate
+                v-if="state === 'Fresh'"
+                attributeName="ry"
+                values="4.5;0.5;4.5"
+                dur="4s"
+                begin="0.1s"
+                repeatCount="indefinite"
+              />
+              <!-- Flow: 正常眨眼（稍延迟） -->
+              <animate
+                v-if="state === 'Flow'"
+                attributeName="ry"
+                values="4.5;0.5;4.5"
+                dur="3s"
+                begin="0.1s"
+                repeatCount="indefinite"
+              />
+              <!-- Warning: 眼睛放大 -->
+              <animate
+                v-if="state === 'Warning'"
+                attributeName="r"
+                values="2.2;2.8;2.2"
+                dur="1.5s"
+                begin="0.1s"
+                repeatCount="indefinite"
+              />
+              <!-- Panic: 眼睛瞪大 -->
+              <animate
+                v-if="state === 'Panic'"
+                attributeName="r"
+                values="2.2;3.2;2.2"
+                dur="0.8s"
+                begin="0.1s"
+                repeatCount="indefinite"
+              />
+              <!-- Exhausted: 眼睛半闭 -->
+              <animate
+                v-if="state === 'Exhausted'"
+                attributeName="ry"
+                values="4.5;2;4.5"
+                dur="5s"
+                begin="0.2s"
+                repeatCount="indefinite"
+              />
+            </circle>
+            <!-- 瞳孔高光 -->
+            <circle cx="39" cy="31" r="0.7" fill="white" opacity="0.85"/>
+          </g>
         </g>
 
         <!-- 黑眼圈（Exhausted 状态） -->
         <g v-if="state === 'Exhausted'" class="dark-circles">
-          <ellipse cx="26" cy="34" rx="4" ry="2" fill="rgba(0,0,0,0.15)" />
-          <ellipse cx="38" cy="34" rx="4" ry="2" fill="rgba(0,0,0,0.15)" />
+          <ellipse cx="24" cy="34" rx="4" ry="2" fill="rgba(0,0,0,0.15)" />
+          <ellipse cx="40" cy="34" rx="4" ry="2" fill="rgba(0,0,0,0.15)" />
+        </g>
+
+        <!-- 嘴巴 - 根据状态动态变化 -->
+        <g class="mouth">
+          <!-- Fresh: 微笑 - 轻柔的弧线 -->
+          <path v-if="state === 'Fresh'"
+                d="M 27 44 Q 32 48 37 44"
+                :stroke="props.strokeColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                fill="none"
+                class="mouth-smile">
+            <animate attributeName="d"
+                     values="M 27 44 Q 32 48 37 44;M 27 44 Q 32 49 37 44;M 27 44 Q 32 48 37 44"
+                     dur="2s"
+                     repeatCount="indefinite" />
+          </path>
+
+          <!-- Flow: 淡定 - 直线微弧 -->
+          <path v-if="state === 'Flow'"
+                d="M 27 45 Q 32 46 37 45"
+                :stroke="props.strokeColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                fill="none"
+                class="mouth-neutral">
+            <animate attributeName="d"
+                     values="M 27 45 Q 32 46 37 45;M 27 45 Q 32 45 37 45;M 27 45 Q 32 46 37 45"
+                     dur="1.5s"
+                     repeatCount="indefinite" />
+          </path>
+
+          <!-- Warning: 担忧 - 波浪线 -->
+          <path v-if="state === 'Warning'"
+                d="M 27 46 Q 29 44 32 46 Q 35 48 37 46"
+                :stroke="props.strokeColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                fill="none"
+                class="mouth-worried">
+            <animate attributeName="d"
+                     values="M 27 46 Q 29 44 32 46 Q 35 48 37 46;M 27 46 Q 29 45 32 47 Q 35 49 37 46;M 27 46 Q 29 44 32 46 Q 35 48 37 46"
+                     dur="1s"
+                     repeatCount="indefinite" />
+          </path>
+
+          <!-- Panic: 张嘴 - 椭圆 -->
+          <ellipse v-if="state === 'Panic'"
+                   cx="32"
+                   cy="46"
+                   rx="3"
+                   ry="4"
+                   :stroke="props.strokeColor"
+                   stroke-width="2"
+                   fill="none"
+                   class="mouth-open">
+            <animate attributeName="ry"
+                     values="4;6;4"
+                     dur="0.4s"
+                     repeatCount="indefinite" />
+            <animate attributeName="cy"
+                     values="46;45;46"
+                     dur="0.4s"
+                     repeatCount="indefinite" />
+          </ellipse>
+
+          <!-- Exhausted: 疲惫 - 下弯弧线 -->
+          <path v-if="state === 'Exhausted'"
+                d="M 27 47 Q 32 44 37 47"
+                :stroke="props.strokeColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                fill="none"
+                class="mouth-tired"
+                opacity="0.7">
+            <animate attributeName="opacity"
+                     values="0.7;0.5;0.7"
+                     dur="3s"
+                     repeatCount="indefinite" />
+          </path>
+
+          <!-- Dead: 死线 - 直线 -->
+          <line v-if="state === 'Dead'"
+                x1="27"
+                y1="46"
+                x2="37"
+                y2="46"
+                :stroke="props.strokeColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                class="mouth-dead"
+                opacity="0.5" />
         </g>
       </g>
 
@@ -538,6 +808,50 @@ const eyeOffset = computed(() => {
                      begin="p.delay + 's'" repeatCount="indefinite" />
           </text>
         </g>
+
+        <!-- 配件渲染 -->
+        <!-- 墨镜 -->
+        <g v-if="props.accessories?.sunglasses" class="accessory sunglasses">
+          <rect x="18" y="28" width="12" height="8" rx="2" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+          <rect x="34" y="28" width="12" height="8" rx="2" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+          <line x1="30" y1="30" x2="34" y2="30" stroke="#333" stroke-width="1"/>
+          <line x1="18" y1="30" x2="14" y2="28" stroke="#333" stroke-width="1"/>
+          <line x1="46" y1="30" x2="50" y2="28" stroke="#333" stroke-width="1"/>
+        </g>
+
+        <!-- 创口贴 -->
+        <g v-if="props.accessories?.bandage" class="accessory bandage">
+          <rect x="42" y="35" width="10" height="6" rx="1" fill="#f5f5dc" stroke="#ddd" stroke-width="0.3"/>
+          <line x1="44" y1="35" x2="44" y2="41" stroke="#ddd" stroke-width="0.3"/>
+          <line x1="47" y1="35" x2="47" y2="41" stroke="#ddd" stroke-width="0.3"/>
+          <line x1="50" y1="35" x2="50" y2="41" stroke="#ddd" stroke-width="0.3"/>
+        </g>
+
+        <!-- 蝴蝶结 -->
+        <g v-if="props.accessories?.bow" class="accessory bow">
+          <path d="M28 15 Q24 12 20 15 Q24 18 28 15" fill="#ff69b4" stroke="#ff1493" stroke-width="0.5"/>
+          <path d="M28 15 Q32 12 36 15 Q32 18 28 15" fill="#ff69b4" stroke="#ff1493" stroke-width="0.5"/>
+          <circle cx="28" cy="15" r="2" fill="#ff1493"/>
+        </g>
+
+        <!-- 帽子 -->
+        <g v-if="props.accessories?.hat === 'cap'" class="accessory hat-cap">
+          <path d="M16 20 Q32 15 48 20 L48 18 Q32 12 16 18 Z" fill="#2196F3"/>
+          <ellipse cx="32" cy="20" rx="16" ry="4" fill="#1976D2"/>
+          <rect x="28" y="8" width="8" height="10" fill="#1976D2"/>
+        </g>
+
+        <g v-if="props.accessories?.hat === 'beanie'" class="accessory hat-beanie">
+          <path d="M18 22 Q18 10 32 8 Q46 10 46 22" fill="#9C27B0"/>
+          <ellipse cx="32" cy="22" rx="14" ry="3" fill="#7B1FA2"/>
+          <circle cx="32" cy="8" r="2" fill="#9C27B0"/>
+        </g>
+
+        <g v-if="props.accessories?.hat === 'straw_hat'" class="accessory hat-straw">
+          <ellipse cx="32" cy="20" rx="20" ry="6" fill="#F5DEB3" stroke="#DEB887" stroke-width="0.5"/>
+          <path d="M24 20 Q32 8 40 20" fill="#F5DEB3" stroke="#DEB887" stroke-width="0.5"/>
+          <path d="M26 18 Q32 10 38 18" fill="none" stroke="#DEB887" stroke-width="0.5"/>
+        </g>
       </g>
     </svg>
   </div>
@@ -652,6 +966,106 @@ const eyeOffset = computed(() => {
   0%, 100% { transform: scale(1.1) rotate(0deg); }
   25% { transform: scale(1.12) rotate(-3deg); }
   75% { transform: scale(1.12) rotate(3deg); }
+}
+
+/* ── 抚摸效果 ── */
+.spirit-container.is-being-petted {
+  animation: pet-shimmer 0.6s ease-out;
+}
+
+.spirit-container.pet-happy {
+  filter: brightness(1.1);
+}
+
+.spirit-container.pet-very-happy {
+  filter: brightness(1.15) saturate(1.2);
+}
+
+.spirit-container.pet-super-happy {
+  filter: brightness(1.2) saturate(1.3);
+  animation: super-happy-bounce 0.5s ease infinite;
+}
+
+@keyframes pet-shimmer {
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.3) saturate(1.2);
+  }
+  100% {
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes super-happy-bounce {
+  0%, 100% {
+    transform: scale(1.1) translateY(0);
+  }
+  50% {
+    transform: scale(1.15) translateY(-6px);
+  }
+}
+
+/* 抚摸时的心形粒子效果 */
+.spirit-container.pet-happy::after,
+.spirit-container.pet-very-happy::after,
+.spirit-container.pet-super-happy::after {
+  content: '❤';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  opacity: 0;
+  animation: heart-pop 0.8s ease-out forwards;
+  pointer-events: none;
+}
+
+.spirit-container.pet-very-happy::after {
+  animation: heart-pop-double 0.8s ease-out forwards;
+}
+
+.spirit-container.pet-super-happy::after {
+  content: '❤❤❤';
+  animation: heart-pop-triple 1s ease-out forwards;
+}
+
+@keyframes heart-pop {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -250%) scale(1.2);
+  }
+}
+
+@keyframes heart-pop-double {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -150%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -300%) scale(1.2);
+  }
+}
+
+@keyframes heart-pop-triple {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -350%) scale(1.5) rotate(15deg);
+  }
 }
 
 /* 黑眼圈 */

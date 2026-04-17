@@ -57,8 +57,10 @@ pub async fn fetch_usage(app: &AppHandle) -> Result<UsageData, String> {
     let mut time_reset_time: Option<i64> = None;
     let mut tokens_percent: u32 = 0;
     let mut tokens_reset_time: Option<i64> = None;
+    let mut tokens_usage: Option<u64> = None;
     let mut weekly_tokens_percent: u32 = 0;
     let mut weekly_tokens_reset_time: Option<i64> = None;
+    let mut weekly_tokens_usage: Option<u64> = None;
     let mut usage_details: Vec<crate::events::UsageDetailData> = Vec::new();
 
     for item in &data.limits {
@@ -84,11 +86,13 @@ pub async fn fetch_usage(app: &AppHandle) -> Result<UsageData, String> {
                         // 周 Token 限制
                         weekly_tokens_percent = item.percentage.unwrap_or(0);
                         weekly_tokens_reset_time = item.next_reset_time;
+                        weekly_tokens_usage = item.usage.map(|u| u as u64);
                     }
                     _ => {
                         // 5h Token 限制（unit=3 或其他）
                         tokens_percent = item.percentage.unwrap_or(0);
                         tokens_reset_time = item.next_reset_time;
+                        tokens_usage = item.usage.map(|u| u as u64);
                     }
                 }
             }
@@ -109,6 +113,8 @@ pub async fn fetch_usage(app: &AppHandle) -> Result<UsageData, String> {
         time_reset_time,
         level: data.level,
         usage_details,
+        tokens_usage,
+        weekly_tokens_usage,
     })
 }
 

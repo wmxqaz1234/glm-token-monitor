@@ -149,6 +149,66 @@ Categories=Utility;
     }
 }
 
+/// 更新阈值配置
+#[tauri::command]
+pub async fn update_threshold_config(
+    app: AppHandle,
+    fresh_threshold: u32,
+    flow_threshold: u32,
+    warning_threshold: u32,
+    panic_threshold: u32,
+) -> Result<(), String> {
+    let mut config = load_config(&app)?;
+
+    // 验证阈值顺序
+    if fresh_threshold >= flow_threshold
+        || flow_threshold >= warning_threshold
+        || warning_threshold >= panic_threshold
+        || panic_threshold >= 100
+    {
+        return Err("阈值顺序错误: fresh < flow < warning < panic < 100".to_string());
+    }
+
+    config.threshold_config.fresh_threshold = fresh_threshold;
+    config.threshold_config.flow_threshold = flow_threshold;
+    config.threshold_config.warning_threshold = warning_threshold;
+    config.threshold_config.panic_threshold = panic_threshold;
+
+    save_config(&app, &config)?;
+
+    // 触发配置变更事件
+    let _ = app.emit("config-changed", &config);
+
+    Ok(())
+}
+
+/// 更新颜色配置
+#[tauri::command]
+pub async fn update_color_config(
+    app: AppHandle,
+    fresh_color: Option<String>,
+    flow_color: Option<String>,
+    warning_color: Option<String>,
+    panic_color: Option<String>,
+    exhausted_color: Option<String>,
+) -> Result<(), String> {
+    let mut config = load_config(&app)?;
+
+    // 如果传入空字符串，则清除自定义颜色（恢复默认）
+    config.threshold_config.fresh_color = if fresh_color.as_deref() == Some("") { None } else { fresh_color };
+    config.threshold_config.flow_color = if flow_color.as_deref() == Some("") { None } else { flow_color };
+    config.threshold_config.warning_color = if warning_color.as_deref() == Some("") { None } else { warning_color };
+    config.threshold_config.panic_color = if panic_color.as_deref() == Some("") { None } else { panic_color };
+    config.threshold_config.exhausted_color = if exhausted_color.as_deref() == Some("") { None } else { exhausted_color };
+
+    save_config(&app, &config)?;
+
+    // 触发配置变更事件
+    let _ = app.emit("config-changed", &config);
+
+    Ok(())
+}
+
 /// 测试 API 连接
 #[tauri::command]
 pub async fn test_api_connection(
@@ -172,4 +232,61 @@ pub async fn test_api_connection(
     } else {
         Err(format!("API returned error: {}", response.status()))
     }
+}
+
+/// 更新成长数据（当获取到新的 token 使用量时调用）
+#[tauri::command]
+pub async fn update_growth_data(
+    app: AppHandle,
+    tokens_usage: u64,
+) -> Result<crate::config::PetGrowthData, String> {
+    let mut config = load_config(&app)?;
+
+    // 添加 token 使用量
+    let upgraded = config.growth_data.add_tokens(tokens_usage);
+
+    save_config(&app, &config)?;
+
+    // 如果升级了，触发特殊事件
+    if upgraded {
+        let _ = app.emit("level-up", config.growth_data.level);
+    }
+
+    // 触发配置变更事件
+    let _ = app.emit("config-changed", &config);
+
+    Ok(config.growth_data)
+}
+
+/// 领取每日成长奖励
+#[tauri::command]
+pub async fn claim_daily_growth_reward(
+    app: AppHandle,
+    current_percent: u32,
+    date: String,
+) -> Result<(u32, bool, crate::config::PetGrowthData), String> {
+    let mut config = load_config(&app)?;
+
+    let (xp, upgraded) = config.growth_data.claim_daily_reward(current_percent, date)?;
+
+    save_config(&app, &config)?;
+
+    // 如果升级了，触发特殊事件
+    if upgraded {
+        let _ = app.emit("level-up", config.growth_data.level);
+    }
+
+    // 触发配置变更事件
+    let _ = app.emit("config-changed", &config);
+
+    Ok((xp, upgraded, config.growth_data))
+}
+
+/// 获取成长数据
+#[tauri::command]
+pub async fn get_growth_data(
+    app: AppHandle,
+) -> Result<crate::config::PetGrowthData, String> {
+    let config = load_config(&app)?;
+    Ok(config.growth_data)
 }

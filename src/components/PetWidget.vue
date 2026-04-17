@@ -16,16 +16,30 @@ import JellySpirit from './pets/JellySpirit.vue'
 import PixelGhost from './pets/PixelGhost.vue'
 
 const { displayMode } = useDisplayMode()
-const { loadConfig, setupConfigListener, config, basicConfig, hasApiKey } = useSettings()
+const { loadConfig, setupConfigListener, config, basicConfig, hasApiKey, thresholdConfig } = useSettings()
 const { usageData, setupEventListener } = useTauriEvents()
 const { currentTheme } = useTheme()
 
+// 获取宠物配件配置
+const petAccessories = computed(() => config.value?.pet_config?.accessories || {})
+
 // 计算是否显示光晕层
 const showGlowEffect = computed(() => basicConfig.value?.enable_glow ?? true)
-const { usagePercent, petState, gradientColor, gradientStrokeColor } = useUsageState(
+const { usagePercent, petState, gradientColor, gradientStrokeColor, colors } = useUsageState(
   computed(() => usageData.value.used),
-  computed(() => usageData.value.total)
+  computed(() => usageData.value.total),
+  thresholdConfig
 )
+
+// 动态 CSS 变量（用于自定义颜色）
+const colorVars = computed(() => ({
+  '--color-fresh': colors.value.Fresh,
+  '--color-flow': colors.value.Flow,
+  '--color-warning': colors.value.Warning,
+  '--color-panic': colors.value.Panic,
+  '--color-exhausted': colors.value.Exhausted,
+  '--color-dead': colors.value.Dead
+}))
 
 // 宠物动作系统
 const { petType, currentAction, setPetType } = usePetAction()
@@ -120,35 +134,170 @@ function updateCountdown() {
 // 悬浮与拖拽相关状态
 const isDragging = ref(false)
 const showInfoPanel = ref(false)
+const showStatusBubble = ref(false)
+let statusBubbleTimer: number | null = null
+
+// 自定义拖动状态
+const isCustomDragging = ref(false)
+const dragOffset = ref({ x: 0, y: 0 })
+const dragVelocity = ref({ x: 0, y: 0 })
+let lastDragPos = { x: 0, y: 0 }
+let lastDragTime = 0
+let inertiaAnimationId: number | null = null
+let dragMoveHandler: ((e: MouseEvent) => void) | null = null
+let dragUpHandler: ((e: MouseEvent) => void) | null = null
+
+// 获取状态文字
+function getStatusText(): string {
+  const stateTexts: Record<string, string> = {
+    'Fresh': '状态良好',
+    'Flow': '流畅工作',
+    'Warning': '注意用量',
+    'Panic': '额度告急',
+    'Exhausted': '即将耗尽',
+    'Dead': '已耗尽'
+  }
+  return stateTexts[petState.value] || petState.value
+}
+
+// 鼠标悬停显示状态文字
+function handleMouseEnter() {
+  if (statusBubbleTimer) clearTimeout(statusBubbleTimer)
+  statusBubbleTimer = window.setTimeout(() => {
+    showStatusBubble.value = true
+  }, 300)
+}
+
+function handleMouseLeave() {
+  if (statusBubbleTimer) clearTimeout(statusBubbleTimer)
+  showStatusBubble.value = false
+}
 
 // 拖动和点击处理
 let dragStartTime = 0
 let dragStartPos = { x: 0, y: 0 }
 
+// 停止惯性动画
+function stopInertia() {
+  if (inertiaAnimationId !== null) {
+    cancelAnimationFrame(inertiaAnimationId)
+    inertiaAnimationId = null
+  }
+}
+
+// 应用惯性效果
+function applyInertia() {
+  const friction = 0.92 // 摩擦系数
+  const minVelocity = 0.5 // 最小速度阈值
+
+  function animate() {
+    // 应用摩擦力
+    dragVelocity.value.x *= friction
+    dragVelocity.value.y *= friction
+
+    // 检查是否停止
+    if (Math.abs(dragVelocity.value.x) < minVelocity && Math.abs(dragVelocity.value.y) < minVelocity) {
+      stopInertia()
+      return
+    }
+
+    // 更新位置
+    dragOffset.value.x += dragVelocity.value.x
+    dragOffset.value.y += dragVelocity.value.y
+
+    // 应用到窗口
+    updateWindowPosition()
+
+    inertiaAnimationId = requestAnimationFrame(animate)
+  }
+
+  animate()
+}
+
+// 更新窗口位置
+async function updateWindowPosition() {
+  try {
+    const { Window } = await import('@tauri-apps/api/window')
+    const win = Window.getCurrent()
+    const pos = await win.outerPosition()
+    await win.setPosition({
+      x: pos.x + dragOffset.value.x,
+      y: pos.y + dragOffset.value.y
+    })
+    // 重置偏移量
+    dragOffset.value = { x: 0, y: 0 }
+  } catch (error) {
+    console.error('[Drag] updateWindowPosition failed:', error)
+  }
+}
+
 const startDrag = async (event: MouseEvent) => {
-  console.log('[Drag] mousedown triggered, target:', (event.target as HTMLElement).tagName, 'button:', event.button)
+  console.log('[Drag] mousedown triggered')
   event.preventDefault()
+
+  // 停止之前的惯性动画
+  stopInertia()
+
   isDragging.value = true
+  isCustomDragging.value = true
 
   // 记录拖动开始时间和位置
   dragStartTime = Date.now()
   dragStartPos = { x: event.clientX, y: event.clientY }
+  lastDragPos = { x: event.clientX, y: event.clientY }
+  lastDragTime = Date.now()
+  dragVelocity.value = { x: 0, y: 0 }
 
-  try {
-    const { Window } = await import('@tauri-apps/api/window')
-    const win = Window.getCurrent()
-    console.log('[Drag] calling startDragging...')
-    await win.startDragging()
-    console.log('[Drag] startDragging completed')
-  } catch (error) {
-    console.error('[Drag] startDragging failed:', error)
-  } finally {
-    // 延迟重置，避免 mouseleave 立即触发收缩
-    setTimeout(() => {
-      isDragging.value = false
-      console.log('[Drag] isDragging reset to false')
-    }, 200)
+  // 添加鼠标移动和释放监听器
+  dragMoveHandler = (e: MouseEvent) => {
+    const now = Date.now()
+    const dt = now - lastDragTime
+
+    // 计算位移
+    const dx = e.clientX - lastDragPos.x
+    const dy = e.clientY - lastDragPos.y
+
+    // 更新位置
+    dragOffset.value = { x: dx, y: dy }
+
+    // 计算速度（像素/毫秒）
+    if (dt > 0) {
+      dragVelocity.value = {
+        x: dx / Math.max(dt, 1),
+        y: dy / Math.max(dt, 1)
+      }
+    }
+
+    lastDragPos = { x: e.clientX, y: e.clientY }
+    lastDragTime = now
+
+    // 立即更新窗口位置
+    updateWindowPosition()
   }
+
+  dragUpHandler = () => {
+    isDragging.value = false
+    isCustomDragging.value = false
+
+    // 移除监听器
+    if (dragMoveHandler) {
+      window.removeEventListener('mousemove', dragMoveHandler)
+      dragMoveHandler = null
+    }
+    if (dragUpHandler) {
+      window.removeEventListener('mouseup', dragUpHandler)
+      dragUpHandler = null
+    }
+
+    // 应用惯性效果
+    const speed = Math.sqrt(dragVelocity.value.x ** 2 + dragVelocity.value.y ** 2)
+    if (speed > 0.5) {
+      applyInertia()
+    }
+  }
+
+  window.addEventListener('mousemove', dragMoveHandler)
+  window.addEventListener('mouseup', dragUpHandler)
 }
 
 // 点击处理（区分拖动和点击）
@@ -192,14 +341,20 @@ async function openSettings() {
   }
 }
 
-// 根据百分比获取状态颜色
+// 根据百分比获取状态颜色（使用配置的阈值和颜色）
 function getStatusColor(percent: number): string {
-  if (percent >= 95) return '#6B7280'
-  if (percent >= 81) return '#EF4444'
-  if (percent >= 65) return '#F97316'
-  if (percent >= 50) return '#F59E0B'
-  if (percent >= 25) return '#0EA5E9'  // 天蓝色
-  return '#1E3A8A'  // 深蓝色
+  const thresholds = thresholdConfig.value
+  const fresh = thresholds?.fresh_threshold ?? 25
+  const flow = thresholds?.flow_threshold ?? 50
+  const warning = thresholds?.warning_threshold ?? 75
+  const panic = thresholds?.panic_threshold ?? 90
+
+  if (percent >= 100) return colors.value.Dead
+  if (percent >= panic) return colors.value.Exhausted
+  if (percent >= warning) return colors.value.Panic
+  if (percent >= flow) return colors.value.Warning
+  if (percent >= fresh) return colors.value.Flow
+  return colors.value.Fresh
 }
 
 // 双击处理 - 阻止全屏
@@ -316,14 +471,17 @@ onUnmounted(() => {
 
 <template>
   <div class="pet-widget" :class="[`pet-${petState.toLowerCase()}`, { 'show-panel': showInfoPanel }]"
+    :style="colorVars"
     data-tauri-drag-region
     @mousedown="startDrag"
     @click="handleClick"
-    @dblclick.prevent="handleDblClick">
+    @dblclick.prevent="handleDblClick"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave">
     <!-- 宠物 -->
     <div class="pet-container" :class="{ hidden: showInfoPanel && hasApiKey }">
-      <JellySpirit v-if="petType === 'spirit'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :width="80" :height="80" />
-      <PixelGhost v-else-if="petType === 'ghost'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :width="80" :height="80" />
+      <JellySpirit v-if="petType === 'spirit'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :width="80" :height="80" :accessories="petAccessories" />
+      <PixelGhost v-else-if="petType === 'ghost'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :width="80" :height="80" :accessories="petAccessories" />
       <CatGifViewer v-else-if="currentAction.startsWith('cat-')" :action="currentAction" :width="80" :height="80" />
       <component v-else :is="petComponents[currentAction as keyof typeof petComponents]" :key="currentAction" />
 
@@ -365,6 +523,16 @@ onUnmounted(() => {
     <div class="refresh-countdown" :class="{ visible: hasApiKey }">
       <span>{{ tokensCountdownDisplay }}</span>
     </div>
+
+    <!-- 底部呼吸灯效果 -->
+    <div class="status-breath-light" :class="`breath-${petState.toLowerCase()}`"></div>
+
+    <!-- 状态文字气泡（悬停显示） -->
+    <transition name="status-bubble">
+      <div v-if="showStatusBubble" class="status-bubble">
+        <span class="status-text">{{ getStatusText() }}</span>
+      </div>
+    </transition>
 
     <!-- API 配置提示气泡（未配置时显示） -->
     <transition name="bubble-fade">
@@ -870,12 +1038,12 @@ onUnmounted(() => {
   text-shadow: 0 0 4px currentColor; font-family: 'Press Start 2P', monospace; font-size: 10px;
   position: relative; z-index: 2;
 }
-.holo-bubble.state-fresh .holo-val { color: #1E3A8A; }
-.holo-bubble.state-flow .holo-val { color: #0EA5E9; }
-.holo-bubble.state-warning .holo-val { color: #FBBF24; }
-.holo-bubble.state-panic .holo-val { color: #F97316; animation: glitch 0.3s infinite; }
-.holo-bubble.state-dead .holo-val { color: #9CA3AF; }
-.holo-bubble.state-exhausted .holo-val { color: #EF4444; }
+.holo-bubble.state-fresh .holo-val { color: var(--color-fresh); }
+.holo-bubble.state-flow .holo-val { color: var(--color-flow); }
+.holo-bubble.state-warning .holo-val { color: var(--color-warning); }
+.holo-bubble.state-panic .holo-val { color: var(--color-panic); animation: glitch 0.3s infinite; }
+.holo-bubble.state-dead .holo-val { color: var(--color-dead); }
+.holo-bubble.state-exhausted .holo-val { color: var(--color-exhausted); }
 
 @keyframes holo-float { 
   from { transform: translateY(0); box-shadow: 0 0 5px rgba(96,165,250,0.2); }
@@ -897,24 +1065,24 @@ onUnmounted(() => {
   fill: none; stroke-width: 2; stroke-linecap: butt;
   transition: stroke-dashoffset 0.5s ease, stroke 0.5s ease;
 }
-.state-fresh .cr-progress { stroke: #1E3A8A; filter: drop-shadow(0 0 4px #1E3A8A); }
-.state-flow .cr-progress { stroke: #0EA5E9; filter: drop-shadow(0 0 4px #0EA5E9); }
-.state-warning .cr-progress { stroke: #FBBF24; filter: drop-shadow(0 0 4px #FBBF24); }
-.state-panic .cr-progress { stroke: #F97316; filter: drop-shadow(0 0 6px #F97316); animation: cr-alarm 1s ease infinite alternate; }
-.state-dead .cr-progress { stroke: #9CA3AF; }
-.state-exhausted .cr-progress { stroke: #EF4444; filter: drop-shadow(0 0 6px #EF4444); animation: cr-alarm 0.8s ease infinite alternate; }
+.state-fresh .cr-progress { stroke: var(--color-fresh); filter: drop-shadow(0 0 4px var(--color-fresh)); }
+.state-flow .cr-progress { stroke: var(--color-flow); filter: drop-shadow(0 0 4px var(--color-flow)); }
+.state-warning .cr-progress { stroke: var(--color-warning); filter: drop-shadow(0 0 4px var(--color-warning)); }
+.state-panic .cr-progress { stroke: var(--color-panic); filter: drop-shadow(0 0 6px var(--color-panic)); animation: cr-alarm 1s ease infinite alternate; }
+.state-dead .cr-progress { stroke: var(--color-dead); }
+.state-exhausted .cr-progress { stroke: var(--color-exhausted); filter: drop-shadow(0 0 6px var(--color-exhausted)); animation: cr-alarm 0.8s ease infinite alternate; }
 
 .cr-center-val {
   position: absolute; bottom: -8px; right: -12px; font-family: 'Press Start 2P', monospace; font-size: 10px; font-weight: bold;
   background: rgba(15,23,42,0.9); padding: 2px 3px; border-radius: 3px; border: 1px solid #1E293B;
   z-index: 25;
 }
-.state-fresh .cr-center-val { color: #1E3A8A; }
-.state-flow .cr-center-val { color: #0EA5E9; }
-.state-warning .cr-center-val { color: #FBBF24; }
-.state-panic .cr-center-val { color: #F97316; }
-.state-dead .cr-center-val { color: #9CA3AF; }
-.state-exhausted .cr-center-val { color: #EF4444; }
+.state-fresh .cr-center-val { color: var(--color-fresh); }
+.state-flow .cr-center-val { color: var(--color-flow); }
+.state-warning .cr-center-val { color: var(--color-warning); }
+.state-panic .cr-center-val { color: var(--color-panic); }
+.state-dead .cr-center-val { color: var(--color-dead); }
+.state-exhausted .cr-center-val { color: var(--color-exhausted); }
 
 @keyframes cr-spin { to { transform: rotate(360deg); } }
 @keyframes cr-alarm { from { opacity: 0.6; } to { opacity: 1; stroke-width: 4; } }
@@ -931,24 +1099,24 @@ onUnmounted(() => {
 .aura-field .r1 { animation-delay: 0s; }
 .aura-field .r2 { animation-delay: 1s; }
 .aura-field .r3 { animation-delay: 2s; }
-.state-fresh .aura-ripple { border-color: #1E3A8A; }
-.state-flow .aura-ripple { border-color: #0EA5E9; }
-.state-warning .aura-ripple { border-color: #FBBF24; animation-duration: 1.5s; }
-.state-panic .aura-ripple { border-color: #F97316; animation-duration: 0.8s; border-width: 2px; }
-.state-dead .aura-ripple { border-color: #6B7280; animation: none; opacity: 0.2; width: 40px; height: 40px; }
-.state-exhausted .aura-ripple { border-color: #EF4444; animation-duration: 0.6s; border-width: 2px; }
+.state-fresh .aura-ripple { border-color: var(--color-fresh); }
+.state-flow .aura-ripple { border-color: var(--color-flow); }
+.state-warning .aura-ripple { border-color: var(--color-warning); animation-duration: 1.5s; }
+.state-panic .aura-ripple { border-color: var(--color-panic); animation-duration: 0.8s; border-width: 2px; }
+.state-dead .aura-ripple { border-color: var(--color-dead); animation: none; opacity: 0.2; width: 40px; height: 40px; }
+.state-exhausted .aura-ripple { border-color: var(--color-exhausted); animation-duration: 0.6s; border-width: 2px; }
 
 .aura-val {
   position: absolute; bottom: -8px; right: -12px; font-family: 'Press Start 2P', monospace; font-size: 10px;
   background: rgba(0,0,0,0.8); padding: 2px 3px; border-radius: 2px; border: 1px dashed;
   z-index: 25;
 }
-.state-fresh .aura-val { color: #1E3A8A; border-color: #1E3A8A; }
-.state-flow .aura-val { color: #0EA5E9; border-color: #0EA5E9; }
-.state-warning .aura-val { color: #FBBF24; border-color: #FBBF24; }
-.state-panic .aura-val { color: #F97316; border-color: #F97316; }
-.state-dead .aura-val { color: #9CA3AF; border-color: #9CA3AF; }
-.state-exhausted .aura-val { color: #EF4444; border-color: #EF4444; }
+.state-fresh .aura-val { color: var(--color-fresh); border-color: var(--color-fresh); }
+.state-flow .aura-val { color: var(--color-flow); border-color: var(--color-flow); }
+.state-warning .aura-val { color: var(--color-warning); border-color: var(--color-warning); }
+.state-panic .aura-val { color: var(--color-panic); border-color: var(--color-panic); }
+.state-dead .aura-val { color: var(--color-dead); border-color: var(--color-dead); }
+.state-exhausted .aura-val { color: var(--color-exhausted); border-color: var(--color-exhausted); }
 
 @keyframes aura-pulse {
   0% { width: 40px; height: 40px; opacity: 0.8; }
@@ -966,23 +1134,23 @@ onUnmounted(() => {
 .ec-pixel {
   width: 4px; height: 4px; background: #1E293B; transition: all 0.3s;
 }
-.state-fresh .ec-pixel.on { background: #1E3A8A; box-shadow: 0 0 3px #1E3A8A; }
-.state-flow .ec-pixel.on { background: #0EA5E9; box-shadow: 0 0 3px #0EA5E9; }
-.state-warning .ec-pixel.on { background: #FBBF24; box-shadow: 0 0 3px #FBBF24; }
-.state-panic .ec-pixel.on { background: #F97316; box-shadow: 0 0 4px #F97316; animation: ec-flash 0.5s infinite alternate; }
-.state-dead .ec-pixel.on { background: #6B7280; box-shadow: none; }
-.state-exhausted .ec-pixel.on { background: #EF4444; box-shadow: 0 0 5px #EF4444; animation: ec-flash 0.4s infinite alternate; }
+.state-fresh .ec-pixel.on { background: var(--color-fresh); box-shadow: 0 0 3px var(--color-fresh); }
+.state-flow .ec-pixel.on { background: var(--color-flow); box-shadow: 0 0 3px var(--color-flow); }
+.state-warning .ec-pixel.on { background: var(--color-warning); box-shadow: 0 0 3px var(--color-warning); }
+.state-panic .ec-pixel.on { background: var(--color-panic); box-shadow: 0 0 4px var(--color-panic); animation: ec-flash 0.5s infinite alternate; }
+.state-dead .ec-pixel.on { background: var(--color-dead); box-shadow: none; }
+.state-exhausted .ec-pixel.on { background: var(--color-exhausted); box-shadow: 0 0 5px var(--color-exhausted); animation: ec-flash 0.4s infinite alternate; }
 
 .ec-val {
   position: absolute; top: -16px; right: 0px; font-family: 'Press Start 2P', monospace; font-size: 10px;
   background: rgba(15,23,42,0.9); padding: 1px 3px; border-radius: 2px; border: 1px solid #1E293B;
 }
-.state-fresh .ec-val { color: #1E3A8A; }
-.state-flow .ec-val { color: #0EA5E9; }
-.state-warning .ec-val { color: #FBBF24; }
-.state-panic .ec-val { color: #F97316; }
-.state-dead .ec-val { color: #9CA3AF; }
-.state-exhausted .ec-val { color: #EF4444; }
+.state-fresh .ec-val { color: var(--color-fresh); }
+.state-flow .ec-val { color: var(--color-flow); }
+.state-warning .ec-val { color: var(--color-warning); }
+.state-panic .ec-val { color: var(--color-panic); }
+.state-dead .ec-val { color: var(--color-dead); }
+.state-exhausted .ec-val { color: var(--color-exhausted); }
 
 @keyframes ec-flash { from { opacity: 0.5; } to { opacity: 1; } }
 
@@ -999,24 +1167,24 @@ onUnmounted(() => {
   position: absolute; bottom: 0; left: 0; right: 0;
   transition: height 0.5s ease, background 0.5s ease;
 }
-.state-fresh .sf-bar-fill { background: linear-gradient(to top, #1E3A8A, #3B82F6); }
-.state-flow .sf-bar-fill { background: linear-gradient(to top, #0284C7, #0EA5E9); }
-.state-warning .sf-bar-fill { background: linear-gradient(to top, #F59E0B, #FBBF24); }
-.state-panic .sf-bar-fill { background: linear-gradient(to top, #EA580C, #F97316); animation: sf-flash 0.8s infinite alternate; }
-.state-dead .sf-bar-fill { background: linear-gradient(to top, #4B5563, #6B7280); animation: sf-flash 0.8s infinite alternate; }
-.state-exhausted .sf-bar-fill { background: linear-gradient(to top, #DC2626, #EF4444); animation: sf-flash 0.6s infinite alternate; }
+.state-fresh .sf-bar-fill { background: linear-gradient(to top, var(--color-fresh), color-mix(in srgb, var(--color-fresh) 70%, white)); }
+.state-flow .sf-bar-fill { background: linear-gradient(to top, var(--color-flow), color-mix(in srgb, var(--color-flow) 70%, white)); }
+.state-warning .sf-bar-fill { background: linear-gradient(to top, var(--color-warning), color-mix(in srgb, var(--color-warning) 70%, white)); }
+.state-panic .sf-bar-fill { background: linear-gradient(to top, var(--color-panic), color-mix(in srgb, var(--color-panic) 70%, white)); animation: sf-flash 0.8s infinite alternate; }
+.state-dead .sf-bar-fill { background: linear-gradient(to top, var(--color-dead), color-mix(in srgb, var(--color-dead) 70%, white)); animation: sf-flash 0.8s infinite alternate; }
+.state-exhausted .sf-bar-fill { background: linear-gradient(to top, var(--color-exhausted), color-mix(in srgb, var(--color-exhausted) 70%, white)); animation: sf-flash 0.6s infinite alternate; }
 
 .sf-text {
   font-family: 'Press Start 2P', monospace; font-size: 10px; margin-top: 2px;
   background: rgba(15,23,42,0.9); padding: 1px 2px; border-radius: 2px; border: 1px solid #1E293B;
   white-space: nowrap;
 }
-.state-fresh .sf-text { color: #1E3A8A; }
-.state-flow .sf-text { color: #0EA5E9; }
-.state-warning .sf-text { color: #FBBF24; }
-.state-panic .sf-text { color: #F97316; }
-.state-dead .sf-text { color: #9CA3AF; }
-.state-exhausted .sf-text { color: #EF4444; }
+.state-fresh .sf-text { color: var(--color-fresh); }
+.state-flow .sf-text { color: var(--color-flow); }
+.state-warning .sf-text { color: var(--color-warning); }
+.state-panic .sf-text { color: var(--color-panic); }
+.state-dead .sf-text { color: var(--color-dead); }
+.state-exhausted .sf-text { color: var(--color-exhausted); }
 
 @keyframes sf-flash { from { opacity: 0.7; } to { opacity: 1; } }
 
@@ -1264,11 +1432,136 @@ onUnmounted(() => {
 	}
 
 	/* 根据状态改变颜色 */
-	.pet-fresh .refresh-countdown span { color: #1E3A8A; border-color: rgba(30, 58, 138, 0.3); }
-	.pet-flow .refresh-countdown span { color: #0EA5E9; border-color: rgba(14, 165, 233, 0.3); }
+	.pet-fresh .refresh-countdown span { color: var(--color-fresh); border-color: color-mix(in srgb, var(--color-fresh) 30%, transparent); }
+	.pet-flow .refresh-countdown span { color: var(--color-flow); border-color: color-mix(in srgb, var(--color-flow) 30%, transparent); }
 	.pet-warning .refresh-countdown span { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); }
 	.pet-panic .refresh-countdown span { color: #f97316; border-color: rgba(249, 115, 22, 0.3); }
 	.pet-dead .refresh-countdown span { color: #9ca3af; border-color: rgba(239, 68, 68, 0.3); }
 		.pet-exhausted .refresh-countdown span { color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
+
+		/* ── 底部呼吸灯效果 ── */
+		.status-breath-light {
+		  position: absolute;
+		  bottom: -6px;
+		  left: 50%;
+		  transform: translateX(-50%);
+		  width: 24px;
+		  height: 4px;
+		  border-radius: 2px;
+		  pointer-events: none;
+		  animation: breath-pulse 2s ease-in-out infinite;
+		}
+
+		/* Fresh 状态 - 深蓝色呼吸灯 */
+		.breath-fresh {
+		  background: var(--color-fresh);
+		  box-shadow: 0 0 8px var(--color-fresh), 0 0 16px var(--color-fresh);
+		  animation-duration: 3s;
+		}
+
+		/* Flow 状态 - 天蓝色呼吸灯 */
+		.breath-flow {
+		  background: var(--color-flow);
+		  box-shadow: 0 0 8px var(--color-flow), 0 0 16px var(--color-flow);
+		  animation-duration: 2.5s;
+		}
+
+		/* Warning 状态 - 黄色呼吸灯 */
+		.breath-warning {
+		  background: var(--color-warning);
+		  box-shadow: 0 0 8px var(--color-warning), 0 0 16px var(--color-warning);
+		  animation-duration: 1.5s;
+		}
+
+		/* Panic 状态 - 橙色快速呼吸灯 */
+		.breath-panic {
+		  background: var(--color-panic);
+		  box-shadow: 0 0 12px var(--color-panic), 0 0 24px var(--color-panic);
+		  animation-duration: 0.8s;
+		}
+
+		/* Exhausted 状态 - 红色急促呼吸灯 */
+		.breath-exhausted {
+		  background: var(--color-exhausted);
+		  box-shadow: 0 0 12px var(--color-exhausted), 0 0 24px var(--color-exhausted);
+		  animation-duration: 0.5s;
+		}
+
+		/* Dead 状态 - 灰色无呼吸 */
+		.breath-dead {
+		  background: var(--color-dead);
+		  box-shadow: none;
+		  animation: none;
+		  opacity: 0.5;
+		}
+
+		@keyframes breath-pulse {
+		  0%, 100% {
+		    opacity: 0.6;
+		    transform: translateX(-50%) scaleX(0.8);
+		  }
+		  50% {
+		    opacity: 1;
+		    transform: translateX(-50%) scaleX(1.2);
+		  }
+		}
+
+		/* ── 状态文字气泡 ── */
+		.status-bubble {
+		  position: absolute;
+		  top: -28px;
+		  left: 50%;
+		  transform: translateX(-50%);
+		  background: rgba(15, 23, 42, 0.95);
+		  border: 1px solid rgba(148, 163, 184, 0.3);
+		  border-radius: 6px;
+		  padding: 4px 10px;
+		  pointer-events: none;
+		  white-space: nowrap;
+		}
+
+		.status-bubble::after {
+		  content: '';
+		  position: absolute;
+		  bottom: -4px;
+		  left: 50%;
+		  transform: translateX(-50%);
+		  width: 0;
+		  height: 0;
+		  border-left: 4px solid transparent;
+		  border-right: 4px solid transparent;
+		  border-top: 4px solid rgba(148, 163, 184, 0.3);
+		}
+
+		.status-text {
+		  font-size: 11px;
+		  font-weight: 500;
+		  color: #e4e4e7;
+		}
+
+		.pet-fresh .status-bubble { border-color: var(--color-fresh); }
+		.pet-fresh .status-text { color: var(--color-fresh); }
+		.pet-flow .status-bubble { border-color: var(--color-flow); }
+		.pet-flow .status-text { color: var(--color-flow); }
+		.pet-warning .status-bubble { border-color: var(--color-warning); }
+		.pet-warning .status-text { color: var(--color-warning); }
+		.pet-panic .status-bubble { border-color: var(--color-panic); }
+		.pet-panic .status-text { color: var(--color-panic); }
+		.pet-exhausted .status-bubble { border-color: var(--color-exhausted); }
+		.pet-exhausted .status-text { color: var(--color-exhausted); }
+		.pet-dead .status-bubble { border-color: var(--color-dead); }
+		.pet-dead .status-text { color: var(--color-dead); }
+
+		/* 状态气泡动画 */
+		.status-bubble-enter-active,
+		.status-bubble-leave-active {
+		  transition: all 0.2s ease;
+		}
+
+		.status-bubble-enter-from,
+		.status-bubble-leave-to {
+		  opacity: 0;
+		  transform: translateX(-50%) translateY(4px);
+		}
 
 </style>

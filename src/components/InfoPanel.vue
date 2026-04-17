@@ -7,21 +7,40 @@ import { useSettings } from '../composables/useSettings'
 
 const { usageData, setupEventListener } = useTauriEvents()
 const { currentTheme, initTheme } = useTheme()
-const { hasApiKey } = useSettings()
+const { hasApiKey, thresholdConfig, config } = useSettings()
+const { growthData, levelTitle, levelProgress, nextLevelXp, currentLevelXp, loadGrowthData } = usePetEffects()
+
+// 获取配置的颜色
+const configColors = computed(() => ({
+  fresh: thresholdConfig.value?.fresh_color || '#1E3A8A',
+  flow: thresholdConfig.value?.flow_color || '#0EA5E9',
+  warning: thresholdConfig.value?.warning_color || '#F59E0B',
+  panic: thresholdConfig.value?.panic_color || '#F97316',
+  exhausted: thresholdConfig.value?.exhausted_color || '#EF4444',
+  dead: '#6B7280'
+}))
 
 // 双指标数据
 const timePercent = computed(() => usageData.value.time_percent ?? 0)
 const tokensPercent = computed(() => usageData.value.tokens_percent ?? 0)
 const weeklyTokensPercent = computed(() => usageData.value.weekly_tokens_percent ?? 0)
 
-// 根据百分比获取状态颜色
+// 根据百分比获取状态颜色（使用配置的阈值和颜色）
 function getStatusColor(percent: number): string {
-  if (percent >= 95) return '#6B7280'
-  if (percent >= 81) return '#EF4444'
-  if (percent >= 65) return '#F97316'
-  if (percent >= 50) return '#F59E0B'
-  if (percent >= 25) return '#0EA5E9'  // 天蓝色
-  return '#1E3A8A'  // 深蓝色
+  const colors = configColors.value
+  const thresholds = thresholdConfig.value
+
+  const fresh = thresholds?.fresh_threshold ?? 25
+  const flow = thresholds?.flow_threshold ?? 50
+  const warning = thresholds?.warning_threshold ?? 75
+  const panic = thresholds?.panic_threshold ?? 90
+
+  if (percent >= 100) return colors.dead
+  if (percent >= panic) return colors.exhausted
+  if (percent >= warning) return colors.panic
+  if (percent >= flow) return colors.warning
+  if (percent >= fresh) return colors.flow
+  return colors.fresh
 }
 
 // 格式化重置时间（简化版）
@@ -84,6 +103,7 @@ async function openSettings() {
 onMounted(async () => {
   await initTheme()
   refreshUsageData()
+  loadGrowthData()
   setupEventListener().then((cleanupFn) => {
     cleanup = cleanupFn
   }).catch((err) => {
@@ -143,6 +163,23 @@ onUnmounted(() => {
 
       <!-- 数据区域 -->
       <div class="data-area">
+        <!-- 等级进度 -->
+        <div class="level-card">
+          <div class="level-header">
+            <div class="level-info">
+              <span class="level-badge">Lv.{{ growthData?.level || 1 }}</span>
+              <span class="level-title">{{ levelTitle || '新手' }}</span>
+            </div>
+            <span class="level-xp">{{ growthData?.current_xp || 0 }} XP</span>
+          </div>
+          <div class="level-progress">
+            <div class="level-progress-bar">
+              <div class="level-progress-fill" :style="{ width: (levelProgress * 100) + '%' }"></div>
+            </div>
+            <span class="level-progress-text">{{ currentLevelXp }}/{{ nextLevelXp }} XP</span>
+          </div>
+        </div>
+
         <!-- 5小时 Token -->
         <div class="stat-row">
           <div class="stat-info">
@@ -521,5 +558,90 @@ onUnmounted(() => {
 
 .info-panel[data-theme="light"] .detail-val {
   color: #1c1c1e;
+}
+
+/* ── 等级卡片 ── */
+.level-card {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-panel[data-theme="light"] .level-card {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.level-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.level-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.level-badge {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+.level-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: #fbbf24;
+  opacity: 0.8;
+}
+
+.level-xp {
+  font-size: 11px;
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+.level-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.level-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.info-panel[data-theme="light"] .level-progress-bar {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.level-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+}
+
+.level-progress-text {
+  font-size: 9px;
+  color: #a1a1aa;
+  min-width: 60px;
+  text-align: right;
+}
+
+.info-panel[data-theme="light"] .level-progress-text {
+  color: #9ca3af;
 }
 </style>

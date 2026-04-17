@@ -23,6 +23,10 @@ pub fn run() {
             settings_commands::save_config_handler,
             settings_commands::test_api_connection,
             settings_commands::set_auto_start,
+            settings_commands::update_threshold_config,
+            settings_commands::update_color_config,
+            settings_commands::claim_daily_growth_reward,
+            settings_commands::get_growth_data,
         ])
         .setup(|app| {
             // Windows 平台：设置完全透明无边框窗口

@@ -2,11 +2,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useUsageState } from '../composables/useUsageState'
 import { useTauriEvents } from '../composables/useTauriEvents'
+import { useSettings } from '../composables/useSettings'
 
 const { usageData, setupEventListener } = useTauriEvents()
+const { thresholdConfig } = useSettings()
 const { usagePercent, petState, stateColor } = useUsageState(
   computed(() => usageData.value.used),
-  computed(() => usageData.value.total)
+  computed(() => usageData.value.total),
+  thresholdConfig
 )
 
 const isOpen = ref(false)

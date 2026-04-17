@@ -8,12 +8,19 @@ interface Props {
   width?: number
   height?: number
   state?: 'Fresh' | 'Flow' | 'Warning' | 'Panic' | 'Exhausted' | 'Dead'
+  accessories?: {
+    sunglasses?: boolean
+    bandage?: boolean
+    bow?: boolean
+    hat?: 'cap' | 'beanie' | 'straw_hat' | null
+  }
 }
 
 const props = withDefaults(defineProps<Props>(), {
   eyeColor: '#1F2937',
   width: 100,
-  height: 100
+  height: 100,
+  accessories: () => ({})
 })
 
 // 皇冠配置
@@ -107,13 +114,13 @@ const particles = computed(() => {
   switch (props.state) {
     case 'Fresh':
       return [
-        { id: 1, type: 'heart', x: 20, y: 10, delay: 0, size: 6 },
-        { id: 2, type: 'heart', x: 44, y: 15, delay: 1.5, size: 5 },
-        { id: 3, type: 'heart', x: 32, y: 8, delay: 3, size: 4 }
+        { id: 1, type: 'heart', x: 6, y: 26, delay: 0, size: 6 },
+        { id: 2, type: 'heart', x: 58, y: 30, delay: 1.5, size: 5 },
+        { id: 3, type: 'heart', x: 4, y: 36, delay: 3, size: 4 }
       ]
     case 'Flow':
       return [
-        { id: 1, type: 'thought', x: 32, y: 2, delay: 0, size: 8 }
+        { id: 1, type: 'thought', x: 58, y: 28, delay: 0, size: 8 }
       ]
     case 'Warning':
       return [
@@ -122,12 +129,12 @@ const particles = computed(() => {
       ]
     case 'Panic':
       return [
-        { id: 1, type: 'exclaim', x: 32, y: 0, delay: 0, size: 10 }
+        { id: 1, type: 'exclaim', x: 58, y: 24, delay: 0, size: 10 }
       ]
     case 'Exhausted':
       return [
-        { id: 1, type: 'star', x: 20, y: 5, delay: 0, size: 5 },
-        { id: 2, type: 'star', x: 44, y: 8, delay: 1, size: 4 }
+        { id: 1, type: 'star', x: 4, y: 28, delay: 0, size: 5 },
+        { id: 2, type: 'star', x: 60, y: 32, delay: 1, size: 4 }
       ]
     case 'Dead':
       return [
@@ -142,6 +149,9 @@ const particles = computed(() => {
 const isHovered = ref(false)
 const isClicked = ref(false)
 const isLongPressed = ref(false)
+const isBeingPetted = ref(false)
+const petStrokeCount = ref(0)
+let petStrokeTimer: number | null = null
 
 // 鼠标位置（用于眼神跟随）
 const mousePosition = ref({ x: 32, y: 32 })
@@ -158,8 +168,29 @@ function handleMouseLeave() {
 
 function handleClick() {
   isClicked.value = true
-  setTimeout(() => isClicked.value = false, 500)
+  isBeingPetted.value = true
+
+  // 抚摸计数
+  petStrokeCount.value++
+  if (petStrokeTimer) clearTimeout(petStrokeTimer)
+  petStrokeTimer = window.setTimeout(() => {
+    petStrokeCount.value = 0
+  }, 2000)
+
+  // 重置状态
+  setTimeout(() => {
+    isClicked.value = false
+    isBeingPetted.value = false
+  }, 600)
 }
+
+// 抚摸等级（基于连续抚摸次数）
+const petLevel = computed(() => {
+  if (petStrokeCount.value >= 5) return 'super-happy'
+  if (petStrokeCount.value >= 3) return 'very-happy'
+  if (petStrokeCount.value >= 1) return 'happy'
+  return ''
+})
 
 function handleMouseDown() {
   setTimeout(() => {
@@ -181,25 +212,79 @@ function handleMouseMove(event: MouseEvent) {
   }
 }
 
-// 计算眼神偏移
+// 计算眼神偏移（优化版）
 const eyeOffset = computed(() => {
-  if (!isHovered.value) return { x: 0, y: 0 }
+  const centerX = 32
+  const centerY = 32
+  const maxOffset = 2.5
 
-  const maxOffset = 1.5
-  const dx = mousePosition.value.x - 32
-  const dy = mousePosition.value.y - 32
+  const dx = mousePosition.value.x - centerX
+  const dy = mousePosition.value.y - centerY
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  const angle = Math.atan2(dy, dx)
+
+  const maxDistance = 50
+  const offsetAmount = Math.min(distance / maxDistance, 1) * maxOffset
 
   return {
-    x: Math.max(-maxOffset, Math.min(maxOffset, dx / 10)),
-    y: Math.max(-maxOffset, Math.min(maxOffset, dy / 10))
+    x: Math.cos(angle) * offsetAmount,
+    y: Math.sin(angle) * offsetAmount
   }
 })
+
+// 瞳孔位置
+const pupilOffset = computed(() => {
+  const centerX = 32
+  const centerY = 32
+  const maxPupilOffset = 1.2
+
+  const dx = mousePosition.value.x - centerX
+  const dy = mousePosition.value.y - centerY
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  const angle = Math.atan2(dy, dx)
+
+  const maxDistance = 40
+  const offsetAmount = Math.min(distance / maxDistance, 1) * maxPupilOffset
+
+  return {
+    x: Math.cos(angle) * offsetAmount,
+    y: Math.sin(angle) * offsetAmount
+  }
+})
+
+// 颜色变亮函数
+function lightenColor(color: string, percent: number): string {
+  const num = parseInt(color.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent)
+  const R = Math.min(255, (num >> 16) + amt)
+  const G = Math.min(255, ((num >> 8) & 0x00FF) + amt)
+  const B = Math.min(255, (num & 0x0000FF) + amt)
+  return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`
+}
+
+// 颜色变暗函数
+function darkenColor(color: string, percent: number): string {
+  const num = parseInt(color.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent)
+  const R = Math.max(0, (num >> 16) - amt)
+  const G = Math.max(0, ((num >> 8) & 0x00FF) - amt)
+  const B = Math.max(0, (num & 0x0000FF) - amt)
+  return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`
+}
 </script>
 
 <template>
   <div
     class="ghost-container"
-    :class="{ 'is-hovered': isHovered, 'is-clicked': isClicked, 'is-long-pressed': isLongPressed }"
+    :class="{
+      'is-hovered': isHovered,
+      'is-clicked': isClicked,
+      'is-long-pressed': isLongPressed,
+      'is-being-petted': isBeingPetted,
+      'pet-happy': petLevel === 'happy',
+      'pet-very-happy': petLevel === 'very-happy',
+      'pet-super-happy': petLevel === 'super-happy'
+    }"
     :style="{ width: `${width}px`, height: `${height}px` }"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
@@ -272,14 +357,41 @@ const eyeOffset = computed(() => {
           additive="sum"
         />
 
-        <!-- 身体 - 完整的幽灵形状 -->
+        <!-- 身体 - 完整的幽灵形状，带渐变和阴影 -->
+        <defs>
+          <!-- 幽灵身体渐变 -->
+          <linearGradient :id="`ghostGradient-${state}`" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" :stop-color="lightenColor(props.color, 25)" />
+            <stop offset="60%" :stop-color="props.color" />
+            <stop offset="100%" :stop-color="darkenColor(props.color, 15)" />
+          </linearGradient>
+          <!-- 内部光泽 -->
+          <radialGradient id="ghostInnerGlow" cx="35%" cy="20%" r="60%">
+            <stop offset="0%" stop-color="white" stop-opacity="0.35" />
+            <stop offset="100%" stop-color="white" stop-opacity="0" />
+          </radialGradient>
+          <!-- 柔和阴影 -->
+          <filter id="ghostSoftShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="rgba(0,0,0,0.2)" />
+          </filter>
+        </defs>
+
+        <!-- 身体阴影层 -->
         <path
-          :fill="props.color"
+          fill="rgba(0,0,0,0.12)"
+          filter="url(#ghostSoftShadow)"
+          d="M 17 13 Q 32 10 48 13 Q 52 13 52 18 L 52 43 Q 52 47 48 47 Q 46 49 44 47 Q 42 45 40 47 Q 38 49 36 47 Q 34 45 32 47 Q 30 49 28 47 Q 26 45 24 47 Q 22 49 20 47 Q 18 45 16 47 Q 13 47 13 43 L 13 18 Q 13 13 17 13 Z"
+        />
+
+        <!-- 身体主体 -->
+        <path
+          :fill="`url(#ghostGradient-${state})`"
           :stroke="props.strokeColor"
           stroke-width="2"
           stroke-linejoin="round"
           stroke-linecap="round"
-          d="M 18 14 Q 32 12 46 14 Q 50 14 50 18 L 50 42 Q 50 46 46 46 Q 44 48 42 46 Q 40 44 38 46 Q 36 48 34 46 Q 32 44 30 46 Q 28 48 26 46 Q 24 44 22 46 Q 20 48 18 46 Q 14 46 14 42 L 14 18 Q 14 14 18 14 Z"
+          :color="props.color"
+          d="M 16 12 Q 32 9 48 12 Q 52 12 52 17 L 52 42 Q 52 46 48 46 Q 46 48 44 46 Q 42 44 40 46 Q 38 48 36 46 Q 34 44 32 46 Q 30 48 28 46 Q 26 44 24 46 Q 22 48 20 46 Q 18 44 16 46 Q 12 46 12 42 L 12 17 Q 12 12 16 12 Z"
         >
           <!-- Fresh: 呼吸缩放 -->
           <animateTransform
@@ -452,46 +564,97 @@ const eyeOffset = computed(() => {
           </circle>
         </g>
 
-        <!-- 小嘴巴 -->
-        <path :stroke="props.strokeColor" stroke-width="1.5" fill="none" stroke-linecap="round"
-          v-if="state === 'Fresh' || state === 'Flow'"
-          d="M 29 34 Q 32 37 35 34"
-        >
-          <animate
-            attributeName="d"
-            values="M 29 34 Q 32 37 35 34; M 29 35 Q 32 38 35 35; M 29 34 Q 32 37 35 34"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-        </path>
+        <!-- 嘴巴 - 根据状态动态变化 -->
+        <g class="mouth">
+          <!-- Fresh: 微笑 - 轻柔的弧线 -->
+          <path v-if="state === 'Fresh'"
+                :stroke="props.strokeColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                fill="none"
+                d="M 28 35 Q 32 39 36 35"
+                class="mouth-smile">
+            <animate attributeName="d"
+                     values="M 28 35 Q 32 39 36 35;M 28 35 Q 32 40 36 35;M 28 35 Q 32 39 36 35"
+                     dur="2.5s"
+                     repeatCount="indefinite" />
+          </path>
 
-        <!-- Warning: 担心嘴型 -->
-        <path :stroke="props.strokeColor" stroke-width="1.5" fill="none" stroke-linecap="round"
-          v-if="state === 'Warning'"
-          d="M 29 35 Q 32 33 35 35"
-        />
+          <!-- Flow: 淡定 - 直线微弧 -->
+          <path v-if="state === 'Flow'"
+                :stroke="props.strokeColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                fill="none"
+                d="M 28 36 Q 32 37 36 36"
+                class="mouth-neutral">
+            <animate attributeName="d"
+                     values="M 28 36 Q 32 37 36 36;M 28 36 Q 32 36 36 36;M 28 36 Q 32 37 36 36"
+                     dur="2s"
+                     repeatCount="indefinite" />
+          </path>
 
-        <!-- Panic: 惊恐嘴型 -->
-        <ellipse :fill="props.strokeColor"
-          v-if="state === 'Panic'"
-          cx="32"
-          cy="36"
-          rx="3.5"
-          ry="2.5"
-        >
-          <animate
-            attributeName="ry"
-            values="2.5;3.5;2.5"
-            dur="0.2s"
-            repeatCount="indefinite"
-          />
-        </ellipse>
+          <!-- Warning: 担忧 - 波浪线 -->
+          <path v-if="state === 'Warning'"
+                :stroke="props.strokeColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                fill="none"
+                d="M 28 37 Q 30 35 32 37 Q 34 39 36 37"
+                class="mouth-worried">
+            <animate attributeName="d"
+                     values="M 28 37 Q 30 35 32 37 Q 34 39 36 37;M 28 37 Q 30 36 32 38 Q 34 40 36 37;M 28 37 Q 30 35 32 37 Q 34 39 36 37"
+                     dur="1.2s"
+                     repeatCount="indefinite" />
+          </path>
 
-        <!-- Exhausted: 波浪嘴型，疲惫 -->
-        <path :stroke="props.strokeColor" stroke-width="1.5" fill="none" stroke-linecap="round"
-          v-if="state === 'Exhausted'"
-          d="M 28 35 Q 30 33 32 35 Q 34 37 36 35"
-        />
+          <!-- Panic: 张嘴 - 椭圆 -->
+          <ellipse v-if="state === 'Panic'"
+                   cx="32"
+                   cy="37"
+                   rx="3.5"
+                   ry="3"
+                   :stroke="props.strokeColor"
+                   stroke-width="1.5"
+                   fill="none"
+                   class="mouth-open">
+            <animate attributeName="ry"
+                     values="3;4;3"
+                     dur="0.3s"
+                     repeatCount="indefinite" />
+            <animate attributeName="cy"
+                     values="37;36;37"
+                     dur="0.3s"
+                     repeatCount="indefinite" />
+          </ellipse>
+
+          <!-- Exhausted: 疲惫 - 下弯弧线 -->
+          <path v-if="state === 'Exhausted'"
+                :stroke="props.strokeColor"
+                stroke-width="1.2"
+                stroke-linecap="round"
+                fill="none"
+                d="M 28 38 Q 32 35 36 38"
+                class="mouth-tired"
+                opacity="0.6">
+            <animate attributeName="opacity"
+                     values="0.6;0.4;0.6"
+                     dur="3.5s"
+                     repeatCount="indefinite" />
+          </path>
+
+          <!-- Dead: 死线 - 直线 -->
+          <line v-if="state === 'Dead'"
+                x1="28"
+                y1="37"
+                x2="36"
+                y2="37"
+                :stroke="props.strokeColor"
+                stroke-width="1.2"
+                stroke-linecap="round"
+                class="mouth-dead"
+                opacity="0.4" />
+        </g>
 
         <!-- Dead: X_X 眼睛 -->
         <g v-if="state === 'Dead'">
@@ -501,6 +664,50 @@ const eyeOffset = computed(() => {
           <path :stroke="props.strokeColor" stroke-width="2" stroke-linecap="round"
             d="M 36 23 L 44 31 M 44 23 L 36 31"
           />
+        </g>
+
+        <!-- 配件渲染 -->
+        <!-- 墨镜 -->
+        <g v-if="props.accessories?.sunglasses" class="accessory sunglasses">
+          <rect x="18" y="24" width="12" height="8" rx="2" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+          <rect x="34" y="24" width="12" height="8" rx="2" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+          <line x1="30" y1="26" x2="34" y2="26" stroke="#333" stroke-width="1"/>
+          <line x1="18" y1="26" x2="14" y2="24" stroke="#333" stroke-width="1"/>
+          <line x1="46" y1="26" x2="50" y2="24" stroke="#333" stroke-width="1"/>
+        </g>
+
+        <!-- 创口贴 -->
+        <g v-if="props.accessories?.bandage" class="accessory bandage">
+          <rect x="42" y="28" width="10" height="6" rx="1" fill="#f5f5dc" stroke="#ddd" stroke-width="0.3"/>
+          <line x1="44" y1="28" x2="44" y2="34" stroke="#ddd" stroke-width="0.3"/>
+          <line x1="47" y1="28" x2="47" y2="34" stroke="#ddd" stroke-width="0.3"/>
+          <line x1="50" y1="28" x2="50" y2="34" stroke="#ddd" stroke-width="0.3"/>
+        </g>
+
+        <!-- 蝴蝶结 -->
+        <g v-if="props.accessories?.bow" class="accessory bow">
+          <path d="M28 12 Q24 9 20 12 Q24 15 28 12" fill="#ff69b4" stroke="#ff1493" stroke-width="0.5"/>
+          <path d="M28 12 Q32 9 36 12 Q32 15 28 12" fill="#ff69b4" stroke="#ff1493" stroke-width="0.5"/>
+          <circle cx="28" cy="12" r="2" fill="#ff1493"/>
+        </g>
+
+        <!-- 帽子 -->
+        <g v-if="props.accessories?.hat === 'cap'" class="accessory hat-cap">
+          <path d="M16 16 Q32 11 48 16 L48 14 Q32 8 16 14 Z" fill="#2196F3"/>
+          <ellipse cx="32" cy="16" rx="16" ry="4" fill="#1976D2"/>
+          <rect x="28" y="4" width="8" height="10" fill="#1976D2"/>
+        </g>
+
+        <g v-if="props.accessories?.hat === 'beanie'" class="accessory hat-beanie">
+          <path d="M18 18 Q18 6 32 4 Q46 6 46 18" fill="#9C27B0"/>
+          <ellipse cx="32" cy="18" rx="14" ry="3" fill="#7B1FA2"/>
+          <circle cx="32" cy="4" r="2" fill="#9C27B0"/>
+        </g>
+
+        <g v-if="props.accessories?.hat === 'straw_hat'" class="accessory hat-straw">
+          <ellipse cx="32" cy="16" rx="20" ry="6" fill="#F5DEB3" stroke="#DEB887" stroke-width="0.5"/>
+          <path d="M24 16 Q32 4 40 16" fill="#F5DEB3" stroke="#DEB887" stroke-width="0.5"/>
+          <path d="M26 14 Q32 6 38 14" fill="none" stroke="#DEB887" stroke-width="0.5"/>
         </g>
       </g>
 
@@ -791,5 +998,126 @@ const eyeOffset = computed(() => {
 @keyframes dark-circle-pulse {
   0%, 100% { opacity: 0.15; }
   50% { opacity: 0.22; }
+}
+
+/* ── 配件样式 ── */
+.accessory {
+  pointer-events: none;
+}
+
+.sunglasses {
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+
+.bandage {
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+
+.bow {
+  filter: drop-shadow(0 1px 2px rgba(255,20,147,0.3));
+}
+
+.hat-cap, .hat-beanie, .hat-straw {
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+}
+
+/* ── 抚摸效果 ── */
+.ghost-container.is-being-petted {
+  animation: ghost-pet-shimmer 0.6s ease-out;
+}
+
+.ghost-container.pet-happy {
+  filter: brightness(1.1);
+}
+
+.ghost-container.pet-very-happy {
+  filter: brightness(1.15) saturate(1.2);
+}
+
+.ghost-container.pet-super-happy {
+  filter: brightness(1.2) saturate(1.3);
+  animation: ghost-super-happy-bounce 0.5s ease infinite;
+}
+
+@keyframes ghost-pet-shimmer {
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.3) saturate(1.2);
+  }
+  100% {
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes ghost-super-happy-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* 抚摸时的心形粒子效果 */
+.ghost-container.pet-happy::after,
+.ghost-container.pet-very-happy::after,
+.ghost-container.pet-super-happy::after {
+  content: '❤';
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  opacity: 0;
+  animation: ghost-heart-pop 0.8s ease-out forwards;
+  pointer-events: none;
+}
+
+.ghost-container.pet-very-happy::after {
+  animation: ghost-heart-pop-double 0.8s ease-out forwards;
+}
+
+.ghost-container.pet-super-happy::after {
+  content: '✨';
+  animation: ghost-sparkle-pop 1s ease-out forwards;
+}
+
+@keyframes ghost-heart-pop {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -200%) scale(1.2);
+  }
+}
+
+@keyframes ghost-heart-pop-double {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -120%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -250%) scale(1.2);
+  }
+}
+
+@keyframes ghost-sparkle-pop {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -300%) scale(1.5) rotate(180deg);
+  }
 }
 </style>
