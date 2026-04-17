@@ -1036,14 +1036,8 @@ onUnmounted(() => {
 }
 .holo-bubble .holo-val {
   text-shadow: 0 0 4px currentColor; font-family: 'Press Start 2P', monospace; font-size: 10px;
-  position: relative; z-index: 2;
+  position: relative; z-index: 2; color: #ffffff !important;
 }
-.holo-bubble.state-fresh .holo-val { color: var(--color-fresh); }
-.holo-bubble.state-flow .holo-val { color: var(--color-flow); }
-.holo-bubble.state-warning .holo-val { color: var(--color-warning); }
-.holo-bubble.state-panic .holo-val { color: var(--color-panic); animation: glitch 0.3s infinite; }
-.holo-bubble.state-dead .holo-val { color: var(--color-dead); }
-.holo-bubble.state-exhausted .holo-val { color: var(--color-exhausted); }
 
 @keyframes holo-float { 
   from { transform: translateY(0); box-shadow: 0 0 5px rgba(96,165,250,0.2); }
@@ -1075,14 +1069,8 @@ onUnmounted(() => {
 .cr-center-val {
   position: absolute; bottom: -8px; right: -12px; font-family: 'Press Start 2P', monospace; font-size: 10px; font-weight: bold;
   background: rgba(15,23,42,0.9); padding: 2px 3px; border-radius: 3px; border: 1px solid #1E293B;
-  z-index: 25;
+  z-index: 25; color: #ffffff !important;
 }
-.state-fresh .cr-center-val { color: var(--color-fresh); }
-.state-flow .cr-center-val { color: var(--color-flow); }
-.state-warning .cr-center-val { color: var(--color-warning); }
-.state-panic .cr-center-val { color: var(--color-panic); }
-.state-dead .cr-center-val { color: var(--color-dead); }
-.state-exhausted .cr-center-val { color: var(--color-exhausted); }
 
 @keyframes cr-spin { to { transform: rotate(360deg); } }
 @keyframes cr-alarm { from { opacity: 0.6; } to { opacity: 1; stroke-width: 4; } }
@@ -1108,15 +1096,9 @@ onUnmounted(() => {
 
 .aura-val {
   position: absolute; bottom: -8px; right: -12px; font-family: 'Press Start 2P', monospace; font-size: 10px;
-  background: rgba(0,0,0,0.8); padding: 2px 3px; border-radius: 2px; border: 1px dashed;
-  z-index: 25;
+  background: rgba(0,0,0,0.8); padding: 2px 3px; border-radius: 2px; border: 1px dashed #ffffff;
+  z-index: 25; color: #ffffff !important;
 }
-.state-fresh .aura-val { color: var(--color-fresh); border-color: var(--color-fresh); }
-.state-flow .aura-val { color: var(--color-flow); border-color: var(--color-flow); }
-.state-warning .aura-val { color: var(--color-warning); border-color: var(--color-warning); }
-.state-panic .aura-val { color: var(--color-panic); border-color: var(--color-panic); }
-.state-dead .aura-val { color: var(--color-dead); border-color: var(--color-dead); }
-.state-exhausted .aura-val { color: var(--color-exhausted); border-color: var(--color-exhausted); }
 
 @keyframes aura-pulse {
   0% { width: 40px; height: 40px; opacity: 0.8; }
@@ -1144,13 +1126,8 @@ onUnmounted(() => {
 .ec-val {
   position: absolute; top: -16px; right: 0px; font-family: 'Press Start 2P', monospace; font-size: 10px;
   background: rgba(15,23,42,0.9); padding: 1px 3px; border-radius: 2px; border: 1px solid #1E293B;
+  color: #ffffff !important;
 }
-.state-fresh .ec-val { color: var(--color-fresh); }
-.state-flow .ec-val { color: var(--color-flow); }
-.state-warning .ec-val { color: var(--color-warning); }
-.state-panic .ec-val { color: var(--color-panic); }
-.state-dead .ec-val { color: var(--color-dead); }
-.state-exhausted .ec-val { color: var(--color-exhausted); }
 
 @keyframes ec-flash { from { opacity: 0.5; } to { opacity: 1; } }
 
@@ -1177,14 +1154,8 @@ onUnmounted(() => {
 .sf-text {
   font-family: 'Press Start 2P', monospace; font-size: 10px; margin-top: 2px;
   background: rgba(15,23,42,0.9); padding: 1px 2px; border-radius: 2px; border: 1px solid #1E293B;
-  white-space: nowrap;
+  white-space: nowrap; color: #ffffff !important;
 }
-.state-fresh .sf-text { color: var(--color-fresh); }
-.state-flow .sf-text { color: var(--color-flow); }
-.state-warning .sf-text { color: var(--color-warning); }
-.state-panic .sf-text { color: var(--color-panic); }
-.state-dead .sf-text { color: var(--color-dead); }
-.state-exhausted .sf-text { color: var(--color-exhausted); }
 
 @keyframes sf-flash { from { opacity: 0.7; } to { opacity: 1; } }
 

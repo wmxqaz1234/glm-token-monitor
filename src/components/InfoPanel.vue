@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useTauriEvents } from '../composables/useTauriEvents'
 import { useTheme } from '../composables/useTheme'
 import { useSettings } from '../composables/useSettings'
+import { usePetEffects } from '../composables/usePetEffects'
 
 const { usageData, setupEventListener } = useTauriEvents()
 const { currentTheme, initTheme } = useTheme()
