@@ -104,39 +104,25 @@ pub fn query_history(hours: u32) -> Result<Vec<HistoryEntry>, Box<dyn std::error
     let db_path = get_db_path()?;
     let conn = Connection::open(&db_path)?;
 
-    let query = if hours > 0 {
-        "SELECT id, timestamp, tokens_percent, tokens_used, time_percent,
+    let (query, params) = if hours > 0 {
+        ("SELECT id, timestamp, tokens_percent, tokens_used, time_percent,
                 time_remaining, weekly_tokens_percent, level
          FROM usage_log
          WHERE datetime(timestamp) >= datetime('now', '-' || ?1 || ' hours')
-         ORDER BY timestamp DESC"
+         ORDER BY timestamp DESC", vec![hours as i32])
     } else {
-        "SELECT id, timestamp, tokens_percent, tokens_used, time_percent,
+        ("SELECT id, timestamp, tokens_percent, tokens_used, time_percent,
                 time_remaining, weekly_tokens_percent, level
          FROM usage_log
-         ORDER BY timestamp DESC"
+         ORDER BY timestamp DESC", vec![])
     };
 
-    let mut stmt = if hours > 0 {
-        conn.prepare(query)?
-    } else {
-        conn.prepare(query)?
-    };
+    let mut stmt = conn.prepare(query)?;
+    let mut results = Vec::new();
 
-    let rows_iter = if hours > 0 {
-        stmt.query_map([hours], |row| {
-            Ok(HistoryEntry {
-                id: row.get(0)?,
-                timestamp: row.get(1)?,
-                tokens_percent: row.get(2)?,
-                tokens_used: row.get(3)?,
-                time_percent: row.get(4)?,
-                time_remaining: row.get(5)?,
-                weekly_tokens_percent: row.get(6)?,
-                level: row.get(7)?,
-            })
-        })?
-    } else {
+    let param_refs: Vec<_> = params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+
+    let rows = if params.is_empty() {
         stmt.query_map([], |row| {
             Ok(HistoryEntry {
                 id: row.get(0)?,
@@ -149,10 +135,22 @@ pub fn query_history(hours: u32) -> Result<Vec<HistoryEntry>, Box<dyn std::error
                 level: row.get(7)?,
             })
         })?
+    } else {
+        stmt.query_map(param_refs.as_slice(), |row| {
+            Ok(HistoryEntry {
+                id: row.get(0)?,
+                timestamp: row.get(1)?,
+                tokens_percent: row.get(2)?,
+                tokens_used: row.get(3)?,
+                time_percent: row.get(4)?,
+                time_remaining: row.get(5)?,
+                weekly_tokens_percent: row.get(6)?,
+                level: row.get(7)?,
+            })
+        })?
     };
 
-    let mut results = Vec::new();
-    for row in rows_iter {
+    for row in rows {
         results.push(row?);
     }
 

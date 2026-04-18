@@ -464,6 +464,7 @@ impl Default for AppConfig {
             basic_config: BasicConfig::default(),
             threshold_config: ThresholdConfig::default(),
             growth_data: PetGrowthData::default(),
+            notification_config: NotificationConfig::default(),
         }
     }
 }
@@ -494,6 +495,8 @@ impl Default for PollingConfig {
     fn default() -> Self {
         Self {
             interval_minutes: 1,
+            adaptive_polling: false,
+            adaptive_config: AdaptivePollingConfig::default(),
         }
     }
 }
@@ -551,6 +554,7 @@ pub fn load_config(app: &AppHandle) -> Result<AppConfig, String> {
                     basic_config: BasicConfig::default(),
                     threshold_config: ThresholdConfig::default(),
                     growth_data: PetGrowthData::default(),
+                    notification_config: NotificationConfig::default(),
                 };
                 // 保存迁移后的配置
                 save_config(app, &migrated_config)?;
