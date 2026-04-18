@@ -1,7 +1,7 @@
 /// 桌面通知模块
 /// 使用 Tauri 的通知插件发送系统通知
 
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use crate::config::{load_config, save_config};
 
 /// 检查并发送预警通知
