@@ -6,12 +6,9 @@ import { useDisplayMode } from '../composables/useDisplayMode'
 import { useSettings } from '../composables/useSettings'
 import { usePetAction } from '../composables/usePetAction'
 import { useTheme } from '../composables/useTheme'
+import { usePetDialogue } from '../composables/usePetDialogue'
+import { usePetMood } from '../composables/usePetMood'
 import type { PetType } from '../types/config'
-import CatGifViewer from './pets/CatGifViewer.vue'
-import DogSit from './pets/DogSit.vue'
-import DogBark from './pets/DogBark.vue'
-import DogWalk from './pets/DogWalk.vue'
-import DogBeg from './pets/DogBeg.vue'
 import JellySpirit from './pets/JellySpirit.vue'
 import PixelGhost from './pets/PixelGhost.vue'
 import Capybara from './pets/Capybara.vue'
@@ -20,6 +17,12 @@ const { displayMode } = useDisplayMode()
 const { loadConfig, setupConfigListener, config, basicConfig, hasApiKey, thresholdConfig } = useSettings()
 const { usageData, setupEventListener } = useTauriEvents()
 const { currentTheme } = useTheme()
+
+// 宠物对话系统
+const { dialogueVisible, currentDialogue, showDialogueForState, showDialogueForEvent, startRandomDialogue, stopRandomDialogue } = usePetDialogue(petState)
+
+// 宠物心情系统
+const { moodLevel, moodColor, moodDescription, moodEmoji, interact, restoreEnergy, startDecayTimer, stopDecayTimer } = usePetMood(petState)
 
 // 获取宠物配件配置
 const petAccessories = computed(() => config.value?.pet_config?.accessories || {})
@@ -52,14 +55,6 @@ watch(() => config.value?.pet_config?.selected_pet, (newPet) => {
     setPetType(newPet as PetType)
   }
 })
-
-// 宠物组件映射
-const petComponents = {
-  'dog-sit': DogSit,
-  'dog-bark': DogBark,
-  'dog-walk': DogWalk,
-  'dog-beg': DogBeg
-} as const
 
 // 双指标数据
 const timePercent = computed(() => usageData.value.time_percent ?? 0)
@@ -113,6 +108,16 @@ const formatCountdown = (seconds: number): string => {
 }
 
 const tokensCountdownDisplay = computed(() => formatCountdown(tokensResetCountdown.value))
+
+// MCP 额度刷新倒计时（秒）
+const timeResetCountdown = computed(() => {
+  if (!usageData.value.time_reset_time) return 0
+  const now = Date.now()
+  const remaining = usageData.value.time_reset_time - now
+  return Math.max(0, Math.floor(remaining / 1000))
+})
+
+const timeCountdownDisplay = computed(() => formatCountdown(timeResetCountdown.value))
 
 // 刷新状态
 const isRefreshing = ref(false)
@@ -322,6 +327,14 @@ const handleClick = async (event: MouseEvent) => {
     } else {
       // 已配置 API，切换信息面板气泡
       showInfoPanel.value = !showInfoPanel.value
+
+      // 宠物互动
+      interact('pet')
+
+      // 如果信息面板未显示，随机显示一条对话
+      if (!showInfoPanel.value) {
+        showDialogueForState(petState.value)
+      }
     }
   }
 }
@@ -402,10 +415,10 @@ watch([hasApiKey, showInfoPanel, displayMode], async ([hasKey, showPanel, mode])
       await invoke('resize_main_window', { width: 160, height: 240 })
     } else if (mode && mode !== 'none') {
       // 有 token 显示模式 + 倒计时，需要更大空间
-      await invoke('resize_main_window', { width: 120, height: 130 })
+      await invoke('resize_main_window', { width: 120, height: 150 })
     } else {
-      // 正常状态 + 倒计时
-      await invoke('resize_main_window', { width: 120, height: 130 })
+      // 正常状态 + 倒计时，增加高度以容纳顶部状态气泡和底部倒计时
+      await invoke('resize_main_window', { width: 120, height: 150 })
     }
   } catch (err) {
     console.error('Failed to resize window:', err)
@@ -431,6 +444,12 @@ function setupDataRefreshTimer() {
 onMounted(async () => {
   // 【重要修复】：把启动定时器放到最顶部！防止由于 Tauri 或其他 await 函数执行超时阻塞定时器注册。
   setupDataRefreshTimer()
+
+  // 启动宠物对话系统（随机对话）
+  startRandomDialogue(5) // 每5分钟随机显示一条对话
+
+  // 启动心情衰减定时器
+  startDecayTimer()
 
   try {
     await setupEventListener()
@@ -467,6 +486,8 @@ onMounted(async () => {
 onUnmounted(() => {
   if (dataRefreshTimer) clearInterval(dataRefreshTimer)
   if (countdownTimer) clearInterval(countdownTimer)
+  stopRandomDialogue()
+  stopDecayTimer()
 })
 </script>
 
@@ -484,8 +505,6 @@ onUnmounted(() => {
       <JellySpirit v-if="petType === 'spirit'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :width="80" :height="80" :accessories="petAccessories" />
       <PixelGhost v-else-if="petType === 'ghost'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :width="80" :height="80" :accessories="petAccessories" />
       <Capybara v-else-if="petType === 'capybara'" :color="gradientColor" :stroke-color="gradientStrokeColor" :state="petState" :action="currentAction" :width="80" :height="80" :accessories="petAccessories" />
-      <CatGifViewer v-else-if="currentAction.startsWith('cat-')" :action="currentAction" :width="80" :height="80" />
-      <component v-else :is="petComponents[currentAction as keyof typeof petComponents]" :key="currentAction" />
 
       <!-- 5 种展示模式多态呈现（跟随宠物隐藏） -->
       <div v-if="displayMode === 'holo-bubble'" class="holo-bubble token-mode" :class="`state-${petState.toLowerCase()}`">
@@ -533,6 +552,14 @@ onUnmounted(() => {
     <transition name="status-bubble">
       <div v-if="showStatusBubble" class="status-bubble">
         <span class="status-text">{{ getStatusText() }}</span>
+      </div>
+    </transition>
+
+    <!-- 宠物对话气泡 -->
+    <transition name="dialogue-bubble">
+      <div v-if="dialogueVisible && currentDialogue" class="dialogue-bubble" :class="`mood-${currentDialogue.mood}`">
+        <span class="dialogue-text">{{ currentDialogue.text }}</span>
+        <span class="dialogue-mood">{{ moodEmoji }}</span>
       </div>
     </transition>
 
@@ -601,7 +628,7 @@ onUnmounted(() => {
             <div class="info-bar">
               <div class="bar-fill" :style="{ width: tokensPercent + '%', background: getStatusColor(tokensPercent) }"></div>
             </div>
-            <span class="info-reset">刷新: {{ tokensResetTime }}</span>
+            <span class="info-reset">刷新: {{ tokensResetTime }} ({{ tokensCountdownDisplay }})</span>
           </div>
           <!-- 周限制 -->
           <div v-if="hasWeeklyLimit" class="info-row">
@@ -623,7 +650,7 @@ onUnmounted(() => {
             <div class="info-bar">
               <div class="bar-fill" :style="{ width: timePercent + '%', background: getStatusColor(timePercent) }"></div>
             </div>
-            <span class="info-reset">刷新: {{ timeResetTime }}</span>
+            <span class="info-reset">刷新: {{ timeResetTime }} ({{ timeCountdownDisplay }})</span>
           </div>
         </div>
       </div>
@@ -751,159 +778,6 @@ onUnmounted(() => {
   height: 80px;
   overflow: visible;
   pointer-events: none;
-}
-
-/* ───── FRESH 动画 ───── */
-.cat-breathe {
-  animation: breathe 2.8s ease-in-out infinite;
-  transform-origin: 22px 55px;
-}
-@keyframes breathe {
-  0%,100% { transform: scaleY(1); }
-  50% { transform: scaleY(1.1); }
-}
-
-.zzz-a { animation: zzz 2.2s ease-in-out infinite; }
-.zzz-b { animation: zzz 2.2s ease-in-out 0.35s infinite; }
-.zzz-c { animation: zzz 2.2s ease-in-out 0.7s infinite; }
-@keyframes zzz {
-  0%   { opacity: 0; transform: translate(0, 4px); }
-  25%  { opacity: 1; }
-  80%  { opacity: 0.8; }
-  100% { opacity: 0; transform: translate(2px, -10px); }
-}
-
-.steam-a { animation: steam 2.2s ease-in-out infinite; }
-.steam-b { animation: steam 2.2s ease-in-out 0.45s infinite; }
-.steam-c { animation: steam 2.2s ease-in-out 0.9s infinite; }
-@keyframes steam {
-  0%   { opacity: 0; transform: translateY(4px) scaleX(1); }
-  30%  { opacity: 0.85; transform: translateY(0) scaleX(1.3); }
-  70%  { opacity: 0.4; }
-  100% { opacity: 0; transform: translateY(-7px) scaleX(0.7); }
-}
-
-/* ───── FLOW 动画 ───── */
-.cursor-blink { animation: blink 1s step-end infinite; }
-@keyframes blink {
-  0%,100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-.arm-l {
-  animation: type-l 0.28s ease-in-out infinite alternate;
-  transform-origin: 9px 58px;
-}
-.arm-r {
-  animation: type-r 0.28s ease-in-out 0.14s infinite alternate;
-  transform-origin: 24px 58px;
-}
-@keyframes type-l {
-  from { transform: translateY(0); }
-  to   { transform: translateY(4px); }
-}
-@keyframes type-r {
-  from { transform: translateY(0); }
-  to   { transform: translateY(4px); }
-}
-
-.todo-bubble {
-  animation: bubble 3.2s ease-in-out infinite;
-}
-@keyframes bubble {
-  0%,100% { transform: translateY(0); opacity: 0.9; }
-  50%      { transform: translateY(-4px); opacity: 1; }
-}
-
-/* ───── WARNING 动画 ───── */
-.warn-svg { animation: warn-shake 0.45s ease-in-out infinite; }
-@keyframes warn-shake {
-  0%,100% { transform: translateX(0); }
-  25%     { transform: translateX(-2px); }
-  75%     { transform: translateX(2px); }
-}
-
-.warnarm-l {
-  animation: wtype 0.18s ease-in-out infinite alternate;
-}
-.warnarm-r {
-  animation: wtype 0.18s ease-in-out 0.09s infinite alternate;
-}
-@keyframes wtype {
-  from { transform: translateY(0); }
-  to   { transform: translateY(5px); }
-}
-
-.swarn-a { animation: steam-warn 1.4s ease-in-out infinite; }
-.swarn-b { animation: steam-warn 1.4s ease-in-out 0.28s infinite; }
-.swarn-c { animation: steam-warn 1.4s ease-in-out 0.56s infinite; }
-@keyframes steam-warn {
-  0%   { opacity: 0; transform: translateY(5px); }
-  30%  { opacity: 0.9; }
-  100% { opacity: 0; transform: translateY(-10px); }
-}
-
-.warn-flash { animation: flash-warn 0.6s ease-in-out infinite alternate; }
-@keyframes flash-warn {
-  from { opacity: 0.5; transform: scale(0.9); }
-  to   { opacity: 1; transform: scale(1.1); }
-}
-
-/* ───── PANIC 动画 ───── */
-.panic-svg { animation: panic-shake 0.12s ease-in-out infinite; }
-@keyframes panic-shake {
-  0%,100% { transform: translate(0, 0); }
-  25%     { transform: translate(-2px, 1px); }
-  50%     { transform: translate(1px, -1px); }
-  75%     { transform: translate(2px, 1px); }
-}
-
-.smoke-a { animation: smoke 1.8s ease-out infinite; }
-.smoke-b { animation: smoke 1.8s ease-out 0.4s infinite; }
-.smoke-c { animation: smoke 1.8s ease-out 0.8s infinite; }
-@keyframes smoke {
-  0%   { transform: translateY(0) scale(1); opacity: 0.6; }
-  100% { transform: translateY(-18px) scale(1.8); opacity: 0; }
-}
-
-.sweat-a { animation: sweat-fly 1.6s ease-in-out infinite; }
-.sweat-b { animation: sweat-fly 1.6s ease-in-out 0.6s infinite; }
-@keyframes sweat-fly {
-  0%   { opacity: 0; transform: translate(0, 0); }
-  30%  { opacity: 1; }
-  100% { opacity: 0; transform: translate(8px, -14px); }
-}
-
-.err-a { animation: err-flash 0.4s ease-in-out infinite alternate; }
-.err-b { animation: err-flash 0.4s ease-in-out 0.2s infinite alternate; }
-@keyframes err-flash {
-  from { opacity: 0.3; transform: scale(0.85); }
-  to   { opacity: 1; transform: scale(1.15); }
-}
-
-.parm-l { animation: parm 0.12s ease-in-out infinite alternate; }
-.parm-r { animation: parm 0.12s ease-in-out 0.06s infinite alternate; }
-@keyframes parm {
-  from { transform: rotate(-35deg) translateY(0); }
-  to   { transform: rotate(-35deg) translateY(-3px); }
-}
-
-/* ───── DEAD 动画 ───── */
-.ghost-body {
-  animation: ghost-float 3.2s ease-in-out infinite;
-}
-@keyframes ghost-float {
-  0%,100% { transform: translateY(0); opacity: 0.9; }
-  50%      { transform: translateY(-9px); opacity: 0.55; }
-}
-
-.dust-a { animation: dust 3.5s ease-in-out infinite; }
-.dust-b { animation: dust 3.5s ease-in-out 0.8s infinite; }
-.dust-c { animation: dust 3.5s ease-in-out 1.6s infinite; }
-.dust-d { animation: dust 3.5s ease-in-out 2.4s infinite; }
-@keyframes dust {
-  0%,100% { opacity: 0; transform: translateY(0); }
-  50%      { opacity: 0.5; transform: translateY(-6px); }
 }
 
 /* ── API 配置提示气泡（宠物下方紧凑对话框）── */
@@ -1535,6 +1409,117 @@ onUnmounted(() => {
 		.status-bubble-leave-to {
 		  opacity: 0;
 		  transform: translateX(-50%) translateY(4px);
+		}
+
+		/* ── 宠物对话气泡 ── */
+		.dialogue-bubble {
+		  position: absolute;
+		  top: -50px;
+		  left: 50%;
+		  transform: translateX(-50%);
+		  background: rgba(15, 23, 42, 0.95);
+		  border: 1.5px solid;
+		  border-radius: 12px;
+		  padding: 6px 12px;
+		  display: flex;
+		  align-items: center;
+		  gap: 6px;
+		  pointer-events: none;
+		  white-space: nowrap;
+		  z-index: 200;
+		  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		  animation: dialogue-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+
+		/* 对话气泡小三角 */
+		.dialogue-bubble::after {
+		  content: '';
+		  position: absolute;
+		  bottom: -5px;
+		  left: 50%;
+		  transform: translateX(-50%);
+		  width: 0;
+		  height: 0;
+		  border-left: 5px solid transparent;
+		  border-right: 5px solid transparent;
+		  border-top: 5px solid currentColor;
+		}
+
+		/* 根据心情设置颜色 */
+		.dialogue-bubble.mood-happy {
+		  border-color: var(--color-fresh);
+		  color: var(--color-fresh);
+		}
+		.dialogue-bubble.mood-happy::after {
+		  border-top-color: var(--color-fresh);
+		}
+
+		.dialogue-bubble.mood-neutral {
+		  border-color: var(--color-flow);
+		  color: var(--color-flow);
+		}
+		.dialogue-bubble.mood-neutral::after {
+		  border-top-color: var(--color-flow);
+		}
+
+		.dialogue-bubble.mood-worried,
+		.dialogue-bubble.mood-sad {
+		  border-color: var(--color-warning);
+		  color: var(--color-warning);
+		}
+		.dialogue-bubble.mood-worried::after,
+		.dialogue-bubble.mood-sad::after {
+		  border-top-color: var(--color-warning);
+		}
+
+		.dialogue-bubble.mood-depressed {
+		  border-color: var(--color-dead);
+		  color: var(--color-dead);
+		}
+		.dialogue-bubble.mood-depressed::after {
+		  border-top-color: var(--color-dead);
+		}
+
+		.dialogue-bubble.mood-excited {
+		  border-color: #FBBF24;
+		  color: #FBBF24;
+		  box-shadow: 0 0 16px rgba(251, 191, 36, 0.4);
+		}
+		.dialogue-bubble.mood-excited::after {
+		  border-top-color: #FBBF24;
+		}
+
+		.dialogue-text {
+		  font-size: 12px;
+		  font-weight: 500;
+		  color: #e4e4e7;
+		}
+
+		.dialogue-mood {
+		  font-size: 14px;
+		}
+
+		@keyframes dialogue-pop {
+		  from {
+		    opacity: 0;
+		    transform: translateX(-50%) translateY(8px) scale(0.8);
+		  }
+		  to {
+		    opacity: 1;
+		    transform: translateX(-50%) translateY(0) scale(1);
+		  }
+		}
+
+		/* 对话气泡动画 */
+		.dialogue-bubble-enter-active,
+		.dialogue-bubble-leave-active {
+		  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+
+		.dialogue-bubble-enter-from,
+		.dialogue-bubble-leave-to {
+		  opacity: 0;
+		  transform: translateX(-50%) translateY(8px) scale(0.8);
 		}
 
 </style>

@@ -1,6 +1,6 @@
 use crate::events::UsageData;
 use crate::polling::fetch_usage;
-use crate::database::{self, HistoryEntry, HistoryStats, CumulativeStats};
+use crate::database::{self, HistoryEntry, HistoryStats, CumulativeStats, ChartData};
 use crate::config::{load_config, save_config, AppConfig, NotificationConfig};
 use crate::notifications;
 use tauri::AppHandle;
@@ -72,6 +72,13 @@ pub fn export_history_csv(hours: u32) -> Result<String, String> {
 pub fn cleanup_history(days: u32) -> Result<String, String> {
     let deleted = database::cleanup_old_data(days).map_err(|e| e.to_string())?;
     Ok(format!("已删除 {} 条旧记录", deleted))
+}
+
+/// 获取图表历史数据（按天聚合）
+/// days: 查询最近 N 天的数据（7, 30, 90）
+#[tauri::command]
+pub fn get_history_data(days: i32) -> Result<Vec<ChartData>, String> {
+    database::get_history_data(days).map_err(|e| e.to_string())
 }
 
 /// 更新通知配置

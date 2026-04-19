@@ -23,6 +23,7 @@ pub fn run() {
             commands::get_cumulative_in_range,
             commands::export_history_csv,
             commands::cleanup_history,
+            commands::get_history_data,
             commands::update_notification_config,
             commands::test_notification,
             windows::open_info_panel,

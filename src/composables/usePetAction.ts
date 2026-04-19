@@ -1,9 +1,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import type { PetType, CatAction, DogAction, CapybaraAction } from '../types/config'
+import type { PetType, CapybaraAction } from '../types/config'
 
 // 动作定义
-const CAT_ACTIONS: CatAction[] = ['cat-sleep', 'cat-play', 'cat-stare', 'cat-stretch']
-const DOG_ACTIONS: DogAction[] = ['dog-sit', 'dog-bark', 'dog-walk', 'dog-beg']
 const SPIRIT_ACTIONS = ['spirit-idle'] // Spirit 只有一个 idle 状态，由 petState 驱动
 const GHOST_ACTIONS = ['ghost-idle']   // Ghost 只有一个 idle 状态，由 petState 驱动
 
@@ -25,8 +23,6 @@ export function usePetAction(initialPet: PetType = 'spirit', interval: number = 
 
   // 获取当前宠物的所有动作
   const availableActions = computed(() => {
-    if (petType.value === 'cat') return CAT_ACTIONS
-    if (petType.value === 'dog') return DOG_ACTIONS
     if (petType.value === 'capybara') return CAPYBARA_ACTIONS
     if (petType.value === 'ghost') return GHOST_ACTIONS
     return SPIRIT_ACTIONS
@@ -46,9 +42,7 @@ export function usePetAction(initialPet: PetType = 'spirit', interval: number = 
       petType.value = type
       // 切换宠物时立即更新动作
       let actions: string[]
-      if (type === 'cat') actions = CAT_ACTIONS
-      else if (type === 'dog') actions = DOG_ACTIONS
-      else if (type === 'capybara') actions = CAPYBARA_ACTIONS
+      if (type === 'capybara') actions = CAPYBARA_ACTIONS
       else if (type === 'ghost') actions = GHOST_ACTIONS
       else actions = SPIRIT_ACTIONS
       currentAction.value = actions[0]

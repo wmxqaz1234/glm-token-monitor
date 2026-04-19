@@ -4,6 +4,8 @@ import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useSettings } from '../composables/useSettings'
 import { useTheme } from '../composables/useTheme'
+import { usePetEffects } from '../composables/usePetEffects'
+import UsageChart from './UsageChart.vue'
 import type { DisplayMode } from '../types/config'
 
 const {
@@ -23,15 +25,15 @@ const {
   updatePetAccessories,
   thresholdConfig,
   updateThresholds,
-  updateColors,
-  growthData,
-  claimDailyReward
+  updateColors
 } = useSettings()
+
+const { growthData, claimReward, loadGrowthData } = usePetEffects()
 
 const { currentTheme, setTheme } = useTheme()
 
 // UI 状态
-const activeTab = ref<'basic' | 'models' | 'pet' | 'threshold' | 'growth'>('basic')
+const activeTab = ref<'basic' | 'models' | 'pet' | 'threshold' | 'growth' | 'history'>('basic')
 const isDragging = ref(false)
 
 const displayModes: { value: DisplayMode; label: string }[] = [
@@ -253,7 +255,7 @@ async function handleClaimReward() {
     isClaiming.value = true
     const maxPercent = config.value?.growth_data?.today_max_percent || 0
     const today = new Date().toISOString().split('T')[0]
-    const result = await claimDailyReward(maxPercent, today)
+    const result = await claimReward(maxPercent, today)
 
     // 重新加载配置
     await loadConfig()
@@ -379,6 +381,7 @@ let cleanup: (() => void) | undefined
 
 onMounted(async () => {
   await loadConfig()
+  await loadGrowthData()
   await setTheme(config.value.basic_config?.theme || 'dark')
   cleanup = await setupConfigListener()
 })
@@ -412,6 +415,7 @@ onUnmounted(() => {
           { id: 'models', label: '模型' },
           { id: 'pet', label: '宠物' },
           { id: 'growth', label: '成长' },
+          { id: 'history', label: '历史' },
           { id: 'threshold', label: '阈值' }
         ]"
         :key="tab.id"
@@ -562,7 +566,8 @@ onUnmounted(() => {
             <label
               v-for="pet in [
                 { value: 'spirit', label: '果冻精灵', desc: 'Jelly Spirit' },
-                { value: 'ghost', label: '像素幽灵', desc: 'Pixel Ghost' }
+                { value: 'ghost', label: '像素幽灵', desc: 'Pixel Ghost' },
+                { value: 'capybara', label: '卡皮巴拉', desc: 'Capybara' }
               ]"
               :key="pet.value"
               class="pet-option"
@@ -685,11 +690,11 @@ onUnmounted(() => {
         <div class="growth-level-card">
           <div class="level-header">
             <div class="level-info">
-              <span class="level-number">Lv.{{ config.growth_data?.level || 1 }}</span>
-              <span class="level-title">{{ config.growth_data?.level ? getLevelTitle(config.growth_data.level) : '新手' }}</span>
+              <span class="level-number">Lv.{{ growthData?.level || 1 }}</span>
+              <span class="level-title">{{ growthData?.level ? getLevelTitle(growthData.level) : '新手' }}</span>
             </div>
             <div class="level-xp">
-              <span class="xp-current">{{ config.growth_data?.current_xp || 0 }} XP</span>
+              <span class="xp-current">{{ growthData?.current_xp || 0 }} XP</span>
             </div>
           </div>
 
@@ -712,16 +717,16 @@ onUnmounted(() => {
 
         <div class="daily-reward-card">
           <div class="reward-info">
-            <div class="reward-percent">今日最高用完率: {{ config.growth_data?.today_max_percent || 0 }}%</div>
+            <div class="reward-percent">今日最高用完率: {{ growthData?.today_max_percent || 0 }}%</div>
             <div class="reward-xp">可获得 {{ getTodayXp() }} XP</div>
           </div>
           <button
             class="claim-btn"
-            :class="{ claimed: config.growth_data?.today_claimed, claiming: isClaiming }"
-            :disabled="config.growth_data?.today_claimed || isClaiming"
+            :class="{ claimed: growthData?.today_claimed, claiming: isClaiming }"
+            :disabled="growthData?.today_claimed || isClaiming"
             @click="handleClaimReward"
           >
-            {{ config.growth_data?.today_claimed ? '已领取' : '领取奖励' }}
+            {{ growthData?.today_claimed ? '已领取' : '领取奖励' }}
           </button>
         </div>
 
@@ -732,7 +737,7 @@ onUnmounted(() => {
             <span class="setting-desc">连续7天保持 ≥70% 用完率获得额外奖励</span>
           </div>
           <div class="streak-display">
-            🔥 {{ config.growth_data?.high_usage_streak || 0 }}/7 天
+            🔥 {{ growthData?.high_usage_streak || 0 }}/7 天
           </div>
         </div>
 
@@ -768,7 +773,7 @@ onUnmounted(() => {
         </div>
 
         <div class="unlock-preview-list">
-          <div v-for="level in 9" :key="level" class="unlock-preview-item" :class="{ current: config.growth_data?.level === level }">
+          <div v-for="level in 9" :key="level" class="unlock-preview-item" :class="{ current: growthData?.level === level }">
             <div class="preview-level">Lv.{{ level + 1 }}</div>
             <div class="preview-items">
               <span v-for="item in getLevelUnlocks(level + 1)" :key="item" class="preview-item">
@@ -777,6 +782,11 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- 历史统计 -->
+      <div v-if="activeTab === 'history'" class="settings-section">
+        <UsageChart />
       </div>
 
       <!-- 阈值设置 -->

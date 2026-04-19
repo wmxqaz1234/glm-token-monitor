@@ -327,3 +327,102 @@ pub fn get_cumulative_in_range(days: u32) -> Result<u64, Box<dyn std::error::Err
 
     Ok(total)
 }
+
+/// 图表历史数据（按天聚合）
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ChartData {
+    pub date: String,        // YYYY-MM-DD
+    pub tokens_used: i64,    // 当天使用的 Token 数量
+    pub tokens_limit: i64,   // Token 限额（固定 100000）
+    pub time_used: i64,      // 当天使用的 MCP 时间（分钟）
+    pub time_limit: i64,     // MCP 时间限额（固定 500）
+}
+
+/// 获取指定天数的历史数据（按天聚合，用于图表展示）
+/// days: 查询最近 N 天的数据
+pub fn get_history_data(days: i32) -> Result<Vec<ChartData>, Box<dyn std::error::Error>> {
+    let db_path = get_db_path()?;
+    let conn = Connection::open(&db_path)?;
+
+    let mut results = Vec::new();
+
+    // 按天聚合数据
+    let query = "
+        SELECT
+            DATE(timestamp) as date,
+            COALESCE(MAX(tokens_used), 0) as tokens_used,
+            100000 as tokens_limit,
+            COALESCE(CAST(COALESCE(SUM(time_percent), 0) * 5 as INTEGER), 0) as time_used,
+            500 as time_limit
+        FROM usage_log
+        WHERE datetime(timestamp) >= datetime('now', '-' || ?1 || ' days')
+        GROUP BY DATE(timestamp)
+        ORDER BY date ASC
+    ";
+
+    let mut stmt = conn.prepare(query)?;
+    let rows = stmt.query_map(params![days], |row| {
+        Ok(ChartData {
+            date: row.get(0)?,
+            tokens_used: row.get(1)?,
+            tokens_limit: row.get(2)?,
+            time_used: row.get(3)?,
+            time_limit: row.get(4)?,
+        })
+    })?;
+
+    for row in rows {
+        results.push(row?);
+    }
+
+    // 如果没有数据，返回空数组
+    if results.is_empty() {
+        return Ok(results);
+    }
+
+    // 填充缺失日期（确保连续日期显示）
+    let mut filled_results = Vec::new();
+    if let Some(first_entry) = results.first() {
+        let start_date = chrono::NaiveDate::parse_from_str(&first_entry.date, "%Y-%m-%d")?;
+        let end_date = chrono::Local::now().date_naive();
+
+        let mut current_date = start_date;
+        let mut result_iter = results.into_iter();
+
+        // 获取第一条记录
+        let mut next_result = result_iter.next();
+
+        while current_date <= end_date {
+            let date_str = current_date.format("%Y-%m-%d").to_string();
+
+            if let Some(ref result) = next_result {
+                if result.date == date_str {
+                    filled_results.push(result.clone());
+                    next_result = result_iter.next();
+                } else {
+                    // 填充缺失日期为 0
+                    filled_results.push(ChartData {
+                        date: date_str,
+                        tokens_used: 0,
+                        tokens_limit: 100000,
+                        time_used: 0,
+                        time_limit: 500,
+                    });
+                }
+            } else {
+                // 后续日期填充为 0
+                filled_results.push(ChartData {
+                    date: date_str,
+                    tokens_used: 0,
+                    tokens_limit: 100000,
+                    time_used: 0,
+                    time_limit: 500,
+                });
+            }
+
+            current_date = current_date.succ_opt().unwrap();
+        }
+    }
+
+    Ok(filled_results)
+}

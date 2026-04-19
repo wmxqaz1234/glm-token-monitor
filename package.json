@@ -6,13 +6,17 @@
     "dev": "vite",
     "build": "vite build",
     "build:check": "vue-tsc && vite build",
+    "check": "vue-tsc --noEmit",
+    "lint": "echo 'No ESLint configured'",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
-    "vue": "^3.4.0"
+    "chart.js": "^4.5.1",
+    "vue": "^3.4.0",
+    "vue-chartjs": "^5.3.3"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

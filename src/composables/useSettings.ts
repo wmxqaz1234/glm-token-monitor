@@ -16,12 +16,13 @@ const globalConfig = ref<AppConfig>({
     display_mode: 'holo-bubble'
   },
   pet_config: {
-    selected_pet: 'cat' as PetType,
+    selected_pet: 'spirit' as PetType,
     action_interval: 25
   },
   basic_config: {
     enable_glow: true,
-    auto_start: false
+    auto_start: false,
+    theme: 'dark' as 'dark' | 'light'
   },
   threshold_config: {
     fresh_threshold: 25,

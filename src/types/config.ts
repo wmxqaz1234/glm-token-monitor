@@ -37,12 +37,6 @@ export type CapybaraAction =
   | 'capybara-munch'     // 嚼草（淡定地吃）
   | 'capybara-stare'     // 看着镜头（呆萌眼神）
 
-// 猫咪动作（已废弃，保留以兼容）
-export type CatAction = 'cat-sleep' | 'cat-play' | 'cat-stare' | 'cat-stretch'
-
-// 狗狗动作（已废弃，保留以兼容）
-export type DogAction = 'dog-sit' | 'dog-bark' | 'dog-walk' | 'dog-beg'
-
 // 宠物配置
 export interface PetConfig {
   selected_pet: PetType
