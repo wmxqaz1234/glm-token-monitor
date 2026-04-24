@@ -1,7 +1,7 @@
 use crate::events::UsageData;
 use crate::polling::fetch_usage;
 use crate::database::{self, HistoryEntry, HistoryStats, CumulativeStats, ChartData};
-use crate::config::{load_config, save_config, AppConfig, NotificationConfig};
+use crate::config::{load_config, save_config, NotificationConfig};
 use crate::notifications;
 use tauri::AppHandle;
 

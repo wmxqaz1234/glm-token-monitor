@@ -3,7 +3,6 @@ use crate::config::get_active_model_config;
 use crate::database::UsageLogEntry;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter};
-use tokio::time::interval;
 
 /// 格式化时间为 API 需要的格式：YYYY-MM-DD HH:MM:SS
 fn format_time(secs: i64) -> String {

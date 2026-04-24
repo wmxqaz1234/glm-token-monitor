@@ -23,7 +23,7 @@ pub async fn save_config_handler(
 
 /// 设置开机自启动
 #[tauri::command]
-pub async fn set_auto_start(app: AppHandle, enabled: bool) -> Result<(), String> {
+pub async fn set_auto_start(_app: AppHandle, enabled: bool) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;

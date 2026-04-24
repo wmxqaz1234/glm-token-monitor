@@ -243,7 +243,7 @@ impl PetGrowthData {
         let xp = Self::calculate_daily_xp(self.today_max_percent);
 
         // 检查里程碑
-        let milestone_reached = self.check_milestones(self.today_max_percent);
+        let _milestone_reached = self.check_milestones(self.today_max_percent);
 
         // 连续高用完率检查
         if self.today_max_percent >= 70 {
